@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Filter, 
   Clock, 
-  CheckCircle2, 
-  XCircle, 
-  PlayCircle,
   Zap,
   Box,
   Coins,
@@ -12,17 +8,11 @@ import {
   Copy,
   Check,
   Terminal,
-  ArrowRight,
   ExternalLink,
   FileText,
   ChevronDown,
   ChevronRight,
-  Bot,
-  Layers,
-  ArrowUp,
-  ArrowDown,
-  CornerDownRight,
-  Clock3
+  Bot
 } from 'lucide-react';
 import Button from '../components/Button';
 import SlideOver from '../components/SlideOver';
@@ -297,30 +287,28 @@ const DashboardPage: React.FC = () => {
         onClose={() => setSelectedDelivery(null)}
         width="max-w-2xl"
         headerContent={selectedDelivery ? (
-          <div className="flex items-center justify-between">
-            {/* Left: ID & Status */}
-            <div className="flex items-center gap-3">
-               <h3 className="text-lg font-bold text-neutral-900 font-mono">{selectedDelivery.id}</h3>
-               <StatusBadge status={selectedDelivery.status} />
-            </div>
-            
-            {/* Right: Summary Metrics */}
-            <div className="flex items-center gap-4 text-sm">
-               <div className="flex flex-col items-end">
-                 <span className="text-[10px] text-neutral-500 uppercase font-semibold">Cost</span>
-                 <span className="font-mono font-medium text-neutral-900">${selectedDelivery.totalCost.toFixed(5)}</span>
-               </div>
-               <div className="w-px h-8 bg-neutral-200" />
-               <div className="flex flex-col items-end">
-                 <span className="text-[10px] text-neutral-500 uppercase font-semibold">Duration</span>
-                 <span className="font-mono font-medium text-neutral-900">{selectedDelivery.duration}</span>
-               </div>
-               <div className="w-px h-8 bg-neutral-200" />
-               <div className="flex flex-col items-end">
-                 <span className="text-[10px] text-neutral-500 uppercase font-semibold">Tokens</span>
-                 <span className="font-mono font-medium text-neutral-900">{selectedDelivery.totalTokens.toLocaleString()}</span>
-               </div>
-            </div>
+          <div className="flex items-center gap-3">
+             <h3 className="text-xl font-bold text-neutral-900 font-mono">{selectedDelivery.id}</h3>
+             <StatusBadge status={selectedDelivery.status} />
+          </div>
+        ) : null}
+        subHeaderContent={selectedDelivery ? (
+          <div className="grid grid-cols-3 border-t border-neutral-200 bg-neutral-50/30">
+             {/* Cost */}
+             <div className="flex flex-col items-center py-3 border-r border-neutral-200">
+               <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider mb-1">Total Cost</span>
+               <span className="font-mono text-lg font-bold text-neutral-900">${selectedDelivery.totalCost.toFixed(5)}</span>
+             </div>
+             {/* Duration */}
+             <div className="flex flex-col items-center py-3 border-r border-neutral-200">
+               <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider mb-1">Duration</span>
+               <span className="font-mono text-lg font-bold text-neutral-900">{selectedDelivery.duration}</span>
+             </div>
+             {/* Tokens */}
+             <div className="flex flex-col items-center py-3">
+               <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider mb-1">Tokens</span>
+               <span className="font-mono text-lg font-bold text-neutral-900">{selectedDelivery.totalTokens.toLocaleString()}</span>
+             </div>
           </div>
         ) : null}
       >
@@ -337,14 +325,14 @@ const DashboardPage: React.FC = () => {
                 
                 {/* Headers for Trace Table */}
                 <div className="flex items-center text-xs font-semibold text-neutral-400 pb-2 px-3 border-b border-neutral-100 mb-2">
-                   <div className="flex-1 pl-8">Step</div>
+                   <div className="flex-1 pl-6">Step</div>
                    <div className="w-24 text-right">Tokens</div>
                    <div className="w-24 text-right">Cost</div>
                    <div className="w-24 text-right">Duration</div>
                 </div>
 
-                <div className="relative border-l border-neutral-200 ml-3 pl-0 space-y-0">
-                  {visibleSteps.map((step, idx) => {
+                <div className="relative ml-3 pl-0 space-y-0">
+                  {visibleSteps.map((step) => {
                      // Check if this step has children
                      const hasChildren = selectedDelivery.steps.some(s => s.parentId === step.id);
                      
@@ -400,7 +388,7 @@ const DashboardPage: React.FC = () => {
                 { n: 1, label: 'Get API Key' },
                 { n: 2, label: 'Install SDK' },
                 { n: 3, label: 'Test Trace' }
-              ].map((s, idx) => (
+              ].map((s) => (
                 <div key={s.n} className="flex flex-col items-center gap-2 relative z-10 w-24">
                    <div className={`
                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
@@ -576,6 +564,7 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
   
   // --- Guide Lines Logic ---
   const isLastChild = (s: Step, allSteps: Step[]) => {
+    // Determine siblings based on parentId
     const siblings = allSteps.filter(sib => sib.parentId === s.parentId);
     if (siblings.length === 0) return true;
     return siblings[siblings.length - 1].id === s.id;
@@ -599,66 +588,95 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
 
   const INDENT_SIZE = 24; // px
 
-  return (
-    <div className="relative group">
-      {/* 1. Guide Lines Container (Absolute, spans full height including details) */}
-      <div className="absolute top-0 bottom-0 left-0 flex pointer-events-none select-none" style={{ width: (step.depth + 1) * INDENT_SIZE }}>
+   return (
+     <div className="relative group">
+      {/* 1. Guide Lines Container (Absolute, spans full height including details) - Moved BEFORE content but controlled via z-index */}
+      <div className="absolute top-0 bottom-0 left-0 flex pointer-events-none select-none z-0" style={{ width: (step.depth + 1) * INDENT_SIZE + 24 }}>
          {/* Ancestor Lines */}
          {Array.from({ length: step.depth }).map((_, i) => {
             const ancestor = ancestorsMap.get(i);
             const isAncestorLast = ancestor ? isLastChild(ancestor, steps) : true;
-            // If ancestor is NOT last, draw a continuous vertical line
-            // If ancestor IS last, no line needed at this depth for this child (gap)
+            // Line should be at the right edge of the slot (aligned with icon center)
             if (isAncestorLast) return <div key={i} style={{ width: INDENT_SIZE }} />;
             
             return (
                <div key={i} style={{ width: INDENT_SIZE }} className="relative">
-                  <div className="absolute top-0 bottom-0 left-1/2 w-px bg-neutral-200 -ml-px" />
+                  {/* Vertical line at the RIGHT edge of the slot to match icon center */}
+                  <div className="absolute top-0 bottom-0 right-0 w-px bg-neutral-200 -mr-px" />
                </div>
             );
          })}
 
-         {/* Current Step Connector (L-Curve) */}
-         {step.depth > 0 && (
-            <div style={{ width: INDENT_SIZE }} className="relative">
-               {/* Vertical from top to center (connects to parent line above) */}
-               <div className="absolute top-0 h-6 left-1/2 w-px bg-neutral-200 -ml-px" />
-               {/* Horizontal to right (connects to icon) */}
-               <div className="absolute top-6 left-1/2 right-0 h-px bg-neutral-200" />
-               {/* Vertical from center to bottom (if not last child, continue line for siblings) */}
-               {!isCurrentLast && (
-                  <div className="absolute top-6 bottom-0 left-1/2 w-px bg-neutral-200 -ml-px" />
-               )}
-            </div>
-         )}
+         {/* Current Step Connector (L-Curve or Vertical Through-Line) */}
+         <div style={{ width: INDENT_SIZE }} className="relative">
+            {step.depth > 0 ? (
+               <>
+                 {/* Parent Line Continuation (from left edge) */}
+                 {/* The parent line is at the left edge of THIS slot (which is right edge of previous slot) */}
+                 <div className="absolute top-0 h-1/2 left-0 w-px bg-neutral-200 -ml-px" />
+                 
+                 {/* L-Curve Horizontal (from left edge to center/right) */}
+                 {/* Icon is at the right edge of this slot. So line goes from left-0 to right-0 */}
+                 <div className="absolute top-1/2 left-0 right-0 h-px bg-neutral-200" />
+                 
+                 {/* Vertical Continuation for Siblings (from center down) */}
+                 {/* If this is NOT the last child, the parent line continues down at left edge */}
+                 {!isCurrentLast && (
+                    <div className="absolute top-1/2 bottom-0 left-0 w-px bg-neutral-200 -ml-px" />
+                 )}
+               </>
+            ) : (
+               /* Depth 0: Vertical Through-Line Logic */
+               <>
+                  {/* Vertical line at right edge (aligned with icon) */}
+                  {/* Connects from top (if not first?) to bottom (if not last) */}
+                  {/* For simplicity, draw full height if not last. 
+                      If first, maybe start from icon top? But "Timeline" usually implies continuous flow.
+                      Let's draw full height line at right edge. 
+                  */}
+                  <div className={`absolute top-0 right-0 w-px bg-neutral-200 -mr-px ${isCurrentLast ? 'h-1/2' : 'bottom-0'}`} />
+               </>
+            )}
+         </div>
       </div>
 
       {/* 2. Content Container */}
       <div 
-         className={`relative transition-colors duration-200 ${isDetailsExpanded ? 'bg-neutral-50' : 'hover:bg-neutral-50'}`}
+         className={`relative transition-all duration-200 rounded-lg border border-transparent z-10
+           ${isDetailsExpanded ? 'bg-neutral-50 border-neutral-200' : 'hover:bg-neutral-50 hover:border-neutral-200'}
+         `}
          style={{ paddingLeft: step.depth * INDENT_SIZE }} // Indent content
       >
         {/* Row Header */}
-        <div className="flex items-center py-3 pr-4 cursor-pointer" onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}>
+        <div 
+          className="flex items-center py-3 pr-4 cursor-pointer" 
+          onClick={() => {
+            // Restore: Clicking the row toggles the Details Panel for ALL spans.
+            setIsDetailsExpanded(!isDetailsExpanded);
+          }}
+        >
            
            {/* Tree Toggle & Icon Area */}
-           <div className="flex items-center justify-center mr-3 relative z-10 w-12 h-6">
-              {/* Expand Button (for parents) */}
+           <div 
+             className="flex items-center justify-center mr-3 relative z-10 w-12 h-6 cursor-pointer"
+             onClick={(e) => {
+               // Interaction: Clicking the icon/chevron toggles the Tree View (Expand/Collapse Children).
+               if (hasChildren) {
+                 e.stopPropagation();
+                 onToggleTreeExpand();
+               }
+             }}
+           >
+              {/* Expand Button */}
               {hasChildren && (
-                <div 
-                  className="absolute -left-3 p-1 hover:bg-neutral-200 rounded text-neutral-500 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleTreeExpand();
-                  }}
-                >
+                <div className="absolute -left-3 p-1 text-neutral-400 transition-colors hover:text-neutral-600">
                   {isTreeExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </div>
               )}
               
               {/* Node Icon */}
               <div className={`
-                 relative z-10 flex items-center justify-center rounded-full border shadow-sm transition-transform duration-200
+                 relative z-20 flex items-center justify-center rounded-full border shadow-sm transition-transform duration-200
                  ${hasChildren ? 'w-6 h-6 border-neutral-300 bg-white text-neutral-700' : 'w-5 h-5 border-neutral-200 bg-neutral-50 text-neutral-500'}
                  ${isFailed ? 'border-red-300 bg-red-50 text-red-600' : ''}
                  ${isDetailsExpanded ? 'scale-110 ring-2 ring-brand-yellow/50 border-brand-yellow' : ''}
@@ -692,19 +710,17 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
               <div className="w-24 font-mono text-xs font-medium text-neutral-900">
                 {step.cost > 0 ? `$${step.cost.toFixed(5)}` : '-'}
               </div>
-              <div className="w-24 font-mono text-xs text-neutral-500">
+              <div className="w-24 font-mono text-xs text-neutral-500 mr-2">
                 {step.durationLabel}
               </div>
            </div>
         </div>
 
-        {/* Inline Details Panel */}
+        {/* --- DETAILS PANEL (Inline) --- */}
         {isDetailsExpanded && (
-          <div className="pb-4 pl-16 pr-4 animate-in slide-in-from-top-1 duration-200 relative">
-             {/* Connection Line to Details */}
-             <div className="absolute left-[2.1rem] top-0 bottom-4 w-px bg-neutral-200 border-l border-dashed border-neutral-300 opacity-50"></div>
-
-             <div className="bg-white border border-neutral-200 rounded-lg p-4 shadow-sm space-y-4">
+          <div className="pb-4 pr-4 pl-12 sm:pl-14 animate-in slide-in-from-top-1 duration-200 relative cursor-default" onClick={(e) => e.stopPropagation()}>
+             
+             <div className="bg-white border border-neutral-200 rounded-lg p-4 shadow-sm space-y-4 mt-2">
                 
                 {/* 1. Usage Breakdown */}
                 {(step.tokensTotal !== undefined || step.tokensIn !== undefined) && (
@@ -715,63 +731,96 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                      <div className="grid grid-cols-3 gap-3">
                         <div className="bg-neutral-50 p-2 rounded border border-neutral-100">
                           <div className="text-[10px] text-neutral-500">Total Tokens</div>
-                          <div className="text-sm font-bold text-neutral-900 font-mono">{step.tokensTotal || 0}</div>
+                          <div className="text-sm font-bold text-neutral-900 font-mono">{step.tokensTotal?.toLocaleString() || 0}</div>
                         </div>
                         <div className="bg-neutral-50 p-2 rounded border border-neutral-100">
                           <div className="text-[10px] text-neutral-500">Input Tokens</div>
-                          <div className="text-sm font-medium text-neutral-700 font-mono">{step.tokensIn || 0}</div>
+                          <div className="text-sm font-medium text-neutral-700 font-mono">{step.tokensIn?.toLocaleString() || 0}</div>
                         </div>
                         <div className="bg-neutral-50 p-2 rounded border border-neutral-100">
                           <div className="text-[10px] text-neutral-500">Output Tokens</div>
-                          <div className="text-sm font-medium text-neutral-700 font-mono">{step.tokensOut || 0}</div>
+                          <div className="text-sm font-medium text-neutral-700 font-mono">{step.tokensOut?.toLocaleString() || 0}</div>
                         </div>
                      </div>
                   </div>
                 )}
 
-                {/* 2. Configuration */}
+                {/* 2. Configuration & I/O */}
                 <div>
-                   <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider flex items-center gap-2">
-                     <Zap size={12} /> Configuration
+                   <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider">
+                     Configuration & I/O
                    </h4>
-                   <div className="text-xs space-y-1">
-                      <div className="flex">
-                         <span className="w-24 text-neutral-500 font-medium">Model</span>
-                         <span className="font-mono text-neutral-900">{step.model || '-'}</span>
+                   <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden text-sm divide-y divide-neutral-100">
+                      {/* Model */}
+                      <div className="flex items-center px-4 py-3">
+                         <div className="w-32 text-neutral-500 font-medium shrink-0">Model</div>
+                         <div className="font-mono text-neutral-900">{step.model || '-'}</div>
                       </div>
-                      {/* Mock Parameters */}
-                      <div className="flex">
-                         <span className="w-24 text-neutral-500 font-medium">Temperature</span>
-                         <span className="font-mono text-neutral-900">0.7</span>
-                      </div>
+                      
+                      {/* Provider (Optional - user didn't show in screenshot but good to keep) */}
+                      {step.provider && (
+                        <div className="flex items-center px-4 py-3">
+                           <div className="w-32 text-neutral-500 font-medium shrink-0">Provider</div>
+                           <div className="font-mono text-neutral-900">{step.provider}</div>
+                        </div>
+                      )}
+
+                      {/* Input */}
+                      {step.input && (
+                        <div className="flex items-start px-4 py-3">
+                           <div className="w-32 text-neutral-500 font-medium shrink-0 pt-1.5">Input</div>
+                           <div className="flex-1 bg-neutral-50 rounded px-3 py-2 border border-neutral-100 font-mono text-xs text-neutral-700 overflow-x-auto max-h-40 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
+                              {step.input}
+                           </div>
+                        </div>
+                      )}
+
+                      {/* Output */}
+                      {step.output && (
+                        <div className="flex items-start px-4 py-3">
+                           <div className="w-32 text-neutral-500 font-medium shrink-0 pt-1.5">Output</div>
+                           <div className="flex-1 bg-neutral-50 rounded px-3 py-2 border border-neutral-100 font-mono text-xs text-neutral-700 overflow-x-auto max-h-60 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
+                              {step.output}
+                           </div>
+                        </div>
+                      )}
+
+                       {/* Error */}
+                       {step.error && (
+                        <div className="flex items-start px-4 py-3 bg-red-50/30">
+                           <div className="w-32 text-red-500 font-medium shrink-0 pt-1.5">Error</div>
+                           <div className="flex-1 bg-red-50 rounded px-3 py-2 border border-red-100 font-mono text-xs text-red-700 overflow-x-auto whitespace-pre-wrap">
+                              {step.error}
+                           </div>
+                        </div>
+                      )}
                    </div>
                 </div>
 
                 {/* 3. Performance */}
                 <div>
-                  <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider flex items-center gap-2">
-                    <Clock3 size={12} /> Performance
+                  <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider">
+                    Performance
                   </h4>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-xs">
-                      <div className="flex justify-between border-b border-neutral-50 pb-1">
-                         <span className="text-neutral-500">Duration</span>
-                         <span className="font-mono text-neutral-900">{step.durationMs}ms</span>
+                  <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden flex divide-x divide-neutral-100">
+                      {/* Finish Reason */}
+                      <div className="flex-1 px-4 py-3">
+                         <div className="text-xs text-neutral-500 mb-1">Finish Reason</div>
+                         <div className="font-mono text-sm text-neutral-900">{step.finishReason || '-'}</div>
                       </div>
-                      <div className="flex justify-between border-b border-neutral-50 pb-1">
-                         <span className="text-neutral-500">Finish Reason</span>
-                         <span className="font-mono text-neutral-900">{step.finishReason || '-'}</span>
+                      
+                      {/* Duration */}
+                      <div className="flex-1 px-4 py-3">
+                         <div className="text-xs text-neutral-500 mb-1">Duration</div>
+                         <div className="font-mono text-sm font-bold text-neutral-900">{step.durationMs}ms</div>
                       </div>
-                      <div className="flex justify-between">
-                         <span className="text-neutral-500">Start Time</span>
-                         <span className="font-mono text-neutral-600">
-                           {new Date(step.startTime).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3 } as any)}
-                         </span>
-                      </div>
-                      <div className="flex justify-between">
-                         <span className="text-neutral-500">End Time</span>
-                         <span className="font-mono text-neutral-600">
-                           {new Date(step.endTime || step.startTime).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3 } as any)}
-                         </span>
+
+                      {/* Start Time */}
+                      <div className="flex-1 px-4 py-3">
+                         <div className="text-xs text-neutral-500 mb-1">Start Time</div>
+                         <div className="font-mono text-sm text-neutral-900">
+                           {step.startTime.split('T')[1]?.split('.')[0] || step.startTime}
+                         </div>
                       </div>
                   </div>
                 </div>

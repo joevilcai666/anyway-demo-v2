@@ -6,11 +6,12 @@ interface SlideOverProps {
   onClose: () => void;
   title?: string;
   headerContent?: React.ReactNode;
+  subHeaderContent?: React.ReactNode;
   children: React.ReactNode;
   width?: string;
 }
 
-const SlideOver: React.FC<SlideOverProps> = ({ isOpen, onClose, title, headerContent, children, width = 'max-w-xl' }) => {
+const SlideOver: React.FC<SlideOverProps> = ({ isOpen, onClose, title, headerContent, subHeaderContent, children, width = 'max-w-xl' }) => {
   
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -49,20 +50,29 @@ const SlideOver: React.FC<SlideOverProps> = ({ isOpen, onClose, title, headerCon
           `}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-white flex-shrink-0">
-            {headerContent ? (
-              <div className="flex-1 min-w-0 mr-4">
-                {headerContent}
+          <div className="bg-white border-b border-neutral-100 flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-4">
+              {headerContent ? (
+                <div className="flex-1 min-w-0 mr-4">
+                  {headerContent}
+                </div>
+              ) : (
+                <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
+              )}
+              <button 
+                onClick={onClose}
+                className="text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 p-2 rounded-full transition-colors focus:outline-none flex-shrink-0"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Sub Header (optional) */}
+            {subHeaderContent && (
+              <div className="w-full">
+                {subHeaderContent}
               </div>
-            ) : (
-              <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
             )}
-            <button 
-              onClick={onClose}
-              className="text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 p-2 rounded-full transition-colors focus:outline-none flex-shrink-0"
-            >
-              <X size={20} />
-            </button>
           </div>
 
           {/* Content */}
