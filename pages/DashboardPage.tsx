@@ -296,42 +296,39 @@ const DashboardPage: React.FC = () => {
         isOpen={!!selectedDelivery} 
         onClose={() => setSelectedDelivery(null)}
         width="max-w-2xl"
+        headerContent={selectedDelivery ? (
+          <div className="flex items-center justify-between">
+            {/* Left: ID & Status */}
+            <div className="flex items-center gap-3">
+               <h3 className="text-lg font-bold text-neutral-900 font-mono">{selectedDelivery.id}</h3>
+               <StatusBadge status={selectedDelivery.status} />
+            </div>
+            
+            {/* Right: Summary Metrics */}
+            <div className="flex items-center gap-4 text-sm">
+               <div className="flex flex-col items-end">
+                 <span className="text-[10px] text-neutral-500 uppercase font-semibold">Cost</span>
+                 <span className="font-mono font-medium text-neutral-900">${selectedDelivery.totalCost.toFixed(5)}</span>
+               </div>
+               <div className="w-px h-8 bg-neutral-200" />
+               <div className="flex flex-col items-end">
+                 <span className="text-[10px] text-neutral-500 uppercase font-semibold">Duration</span>
+                 <span className="font-mono font-medium text-neutral-900">{selectedDelivery.duration}</span>
+               </div>
+               <div className="w-px h-8 bg-neutral-200" />
+               <div className="flex flex-col items-end">
+                 <span className="text-[10px] text-neutral-500 uppercase font-semibold">Tokens</span>
+                 <span className="font-mono font-medium text-neutral-900">{selectedDelivery.totalTokens.toLocaleString()}</span>
+               </div>
+            </div>
+          </div>
+        ) : null}
       >
         {selectedDelivery && (
           <div className="flex flex-col h-full bg-[#FAFAFA]">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-white flex-shrink-0">
-               <div className="flex items-center gap-3">
-                 <h2 className="text-lg font-bold text-neutral-900 font-mono">{selectedDelivery.id}</h2>
-                 <StatusBadge status={selectedDelivery.status} />
-               </div>
-            </div>
-
             {/* Content Scrollable */}
             <div className="flex-1 overflow-y-auto">
               
-              {/* Summary Metrics */}
-              <div className="grid grid-cols-3 divide-x divide-neutral-200 border-b border-neutral-200 bg-white">
-                <div className="p-4 text-center">
-                  <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Total Cost</div>
-                  <div className="text-2xl font-bold text-neutral-900 tabular-nums tracking-tight font-mono">
-                    ${selectedDelivery.totalCost.toFixed(5)}
-                  </div>
-                </div>
-                <div className="p-4 text-center">
-                  <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Duration</div>
-                  <div className="text-2xl font-bold text-neutral-900 tabular-nums tracking-tight font-mono">
-                    {selectedDelivery.duration}
-                  </div>
-                </div>
-                <div className="p-4 text-center">
-                  <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Tokens</div>
-                  <div className="text-2xl font-bold text-neutral-900 tabular-nums tracking-tight font-mono">
-                    {selectedDelivery.totalTokens.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-
               {/* Execution Trace (Tree + Waterfall) */}
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4 px-1">
@@ -340,13 +337,13 @@ const DashboardPage: React.FC = () => {
                 
                 {/* Headers for Trace Table */}
                 <div className="flex items-center text-xs font-semibold text-neutral-400 pb-2 px-3 border-b border-neutral-100 mb-2">
-                   <div className="flex-1">Step</div>
+                   <div className="flex-1 pl-8">Step</div>
                    <div className="w-24 text-right">Tokens</div>
                    <div className="w-24 text-right">Cost</div>
                    <div className="w-24 text-right">Duration</div>
                 </div>
 
-                <div className="space-y-1">
+                <div className="relative border-l border-neutral-200 ml-3 pl-0 space-y-0">
                   {visibleSteps.map((step, idx) => {
                      // Check if this step has children
                      const hasChildren = selectedDelivery.steps.some(s => s.parentId === step.id);
@@ -578,16 +575,13 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
   const isFailed = step.status === 'failed';
   
   // --- Guide Lines Logic ---
-  // 1. Identify if current step is the last child of its parent
   const isLastChild = (s: Step, allSteps: Step[]) => {
     const siblings = allSteps.filter(sib => sib.parentId === s.parentId);
-    // Assuming steps are sorted chronologically/by index, the last one is the last child
     if (siblings.length === 0) return true;
     return siblings[siblings.length - 1].id === s.id;
   };
   const isCurrentLast = isLastChild(step, steps);
 
-  // 2. Build Ancestor Map for indentation lines
   const ancestorsMap = useMemo(() => {
     const map = new Map<number, Step>();
     let curr = step;
@@ -603,79 +597,82 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
     return map;
   }, [step, steps]);
 
-  return (
-    <div className={`
-      bg-white rounded-lg border transition-all duration-200 overflow-hidden mb-1
-      ${isFailed ? 'border-red-200' : 'border-neutral-200'}
-      ${isDetailsExpanded ? 'ring-1 ring-neutral-300 shadow-md' : 'hover:border-neutral-300 shadow-sm'}
-    `}>
-      {/* Main Row Grid */}
-      <div 
-        className={`flex items-center p-3 cursor-pointer ${isFailed ? 'bg-red-50/30' : 'bg-white'} relative`}
-      >
-        {/* Left: Identity (Tree Structure) */}
-        <div className="flex-1 flex items-center min-w-0 pr-4 h-full">
-           {/* Indentation with Guide Lines */}
-           <div className="flex-shrink-0 flex h-full mr-2 select-none">
-              {/* Passing lines for ancestors */}
-              {Array.from({ length: Math.max(0, step.depth - 1) }).map((_, i) => {
-                 const ancestor = ancestorsMap.get(i);
-                 const isAncestorLast = ancestor ? isLastChild(ancestor, steps) : true;
-                 return (
-                    <div key={i} className="w-8 flex justify-center relative">
-                       {!isAncestorLast && <div className="absolute top-0 bottom-0 w-px bg-neutral-300" />}
-                    </div>
-                 );
-              })}
-              
-              {/* Connector for current step (only if depth > 0) */}
-              {step.depth > 0 && (
-                 <div className="w-8 flex justify-center relative">
-                    {/* Vertical from top to center */}
-                    <div className="absolute top-0 h-1/2 w-px bg-neutral-300" />
-                    {/* Horizontal to right (branch line) */}
-                    <div className="absolute top-1/2 left-1/2 w-1/2 h-px bg-neutral-300" />
-                    {/* Vertical from center to bottom (if not last) */}
-                    {!isCurrentLast && <div className="absolute top-1/2 bottom-0 w-px bg-neutral-300" />}
-                 </div>
-              )}
-           </div>
-           
-           {/* Collapse/Expand for children */}
-           <div 
-             className="mr-2 flex-shrink-0 w-6 h-6 flex items-center justify-center hover:bg-neutral-100 rounded cursor-pointer transition-colors"
-             onClick={(e) => {
-               e.stopPropagation();
-               if (hasChildren) onToggleTreeExpand();
-             }}
-           >
-             {hasChildren ? (
-               isTreeExpanded ? <ChevronDown size={14} className="text-neutral-500" /> : <ChevronRight size={14} className="text-neutral-500" />
-             ) : (
-               <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
-             )}
-           </div>
+  const INDENT_SIZE = 24; // px
 
-           {/* Icon */}
-           <div 
-             className={`
-               w-7 h-7 rounded-md flex items-center justify-center border shrink-0 mr-3
-               ${isFailed ? 'bg-red-100 border-red-200 text-red-600' : 'bg-neutral-50 border-neutral-200 text-neutral-600'}
-             `}
-             onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-           >
-              {step.type === 'llm' && <Bot size={16} />}
-              {step.type === 'tool' && <Terminal size={16} />}
-              {step.type === 'system' && <Box size={16} />}
-              {step.type === 'retrieval' && <Search size={16} />}
+  return (
+    <div className="relative group">
+      {/* 1. Guide Lines Container (Absolute, spans full height including details) */}
+      <div className="absolute top-0 bottom-0 left-0 flex pointer-events-none select-none" style={{ width: (step.depth + 1) * INDENT_SIZE }}>
+         {/* Ancestor Lines */}
+         {Array.from({ length: step.depth }).map((_, i) => {
+            const ancestor = ancestorsMap.get(i);
+            const isAncestorLast = ancestor ? isLastChild(ancestor, steps) : true;
+            // If ancestor is NOT last, draw a continuous vertical line
+            // If ancestor IS last, no line needed at this depth for this child (gap)
+            if (isAncestorLast) return <div key={i} style={{ width: INDENT_SIZE }} />;
+            
+            return (
+               <div key={i} style={{ width: INDENT_SIZE }} className="relative">
+                  <div className="absolute top-0 bottom-0 left-1/2 w-px bg-neutral-200 -ml-px" />
+               </div>
+            );
+         })}
+
+         {/* Current Step Connector (L-Curve) */}
+         {step.depth > 0 && (
+            <div style={{ width: INDENT_SIZE }} className="relative">
+               {/* Vertical from top to center (connects to parent line above) */}
+               <div className="absolute top-0 h-6 left-1/2 w-px bg-neutral-200 -ml-px" />
+               {/* Horizontal to right (connects to icon) */}
+               <div className="absolute top-6 left-1/2 right-0 h-px bg-neutral-200" />
+               {/* Vertical from center to bottom (if not last child, continue line for siblings) */}
+               {!isCurrentLast && (
+                  <div className="absolute top-6 bottom-0 left-1/2 w-px bg-neutral-200 -ml-px" />
+               )}
+            </div>
+         )}
+      </div>
+
+      {/* 2. Content Container */}
+      <div 
+         className={`relative transition-colors duration-200 ${isDetailsExpanded ? 'bg-neutral-50' : 'hover:bg-neutral-50'}`}
+         style={{ paddingLeft: step.depth * INDENT_SIZE }} // Indent content
+      >
+        {/* Row Header */}
+        <div className="flex items-center py-3 pr-4 cursor-pointer" onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}>
+           
+           {/* Tree Toggle & Icon Area */}
+           <div className="flex items-center justify-center mr-3 relative z-10 w-12 h-6">
+              {/* Expand Button (for parents) */}
+              {hasChildren && (
+                <div 
+                  className="absolute -left-3 p-1 hover:bg-neutral-200 rounded text-neutral-500 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleTreeExpand();
+                  }}
+                >
+                  {isTreeExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                </div>
+              )}
+              
+              {/* Node Icon */}
+              <div className={`
+                 relative z-10 flex items-center justify-center rounded-full border shadow-sm transition-transform duration-200
+                 ${hasChildren ? 'w-6 h-6 border-neutral-300 bg-white text-neutral-700' : 'w-5 h-5 border-neutral-200 bg-neutral-50 text-neutral-500'}
+                 ${isFailed ? 'border-red-300 bg-red-50 text-red-600' : ''}
+                 ${isDetailsExpanded ? 'scale-110 ring-2 ring-brand-yellow/50 border-brand-yellow' : ''}
+              `}>
+                  {step.type === 'llm' && <Bot size={hasChildren ? 14 : 12} />}
+                  {step.type === 'tool' && <Terminal size={hasChildren ? 14 : 12} />}
+                  {step.type === 'system' && <Box size={hasChildren ? 14 : 12} />}
+                  {step.type === 'retrieval' && <Search size={hasChildren ? 14 : 12} />}
+              </div>
            </div>
 
            {/* Name & Provider */}
-           <div 
-             className="min-w-0 flex-1"
-             onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-           >
-             <div className={`text-sm text-neutral-900 truncate ${hasChildren ? 'font-bold' : 'font-normal'}`}>
+           <div className="flex-1 min-w-0">
+             <div className={`text-sm text-neutral-900 truncate ${hasChildren ? 'font-bold' : 'font-medium'}`}>
                {step.name}
              </div>
              {step.provider && (
@@ -686,109 +683,102 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                </div>
              )}
            </div>
+
+           {/* Metrics */}
+           <div className="flex items-center gap-0 text-right opacity-80 group-hover:opacity-100 transition-opacity">
+              <div className="w-24 font-mono text-[10px] text-neutral-500">
+                {step.tokensTotal !== undefined ? `${step.tokensTotal.toLocaleString()}` : '-'}
+              </div>
+              <div className="w-24 font-mono text-xs font-medium text-neutral-900">
+                {step.cost > 0 ? `$${step.cost.toFixed(5)}` : '-'}
+              </div>
+              <div className="w-24 font-mono text-xs text-neutral-500">
+                {step.durationLabel}
+              </div>
+           </div>
         </div>
 
-        {/* Right: Metrics (Fixed Width Columns) */}
-        <div className="flex items-center gap-0 text-right" onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}>
-           <div className="w-24 font-mono text-[10px] text-neutral-500">
-             {step.tokensTotal !== undefined ? `${step.tokensTotal.toLocaleString()}` : '-'}
-           </div>
-           <div className="w-24 font-mono text-xs font-medium text-neutral-900">
-             {step.cost > 0 ? `$${step.cost.toFixed(5)}` : '-'}
-           </div>
-           <div className="w-24 font-mono text-xs text-neutral-500">
-             {step.durationLabel}
-           </div>
-        </div>
-      </div>
+        {/* Inline Details Panel */}
+        {isDetailsExpanded && (
+          <div className="pb-4 pl-16 pr-4 animate-in slide-in-from-top-1 duration-200 relative">
+             {/* Connection Line to Details */}
+             <div className="absolute left-[2.1rem] top-0 bottom-4 w-px bg-neutral-200 border-l border-dashed border-neutral-300 opacity-50"></div>
 
-      {/* Expanded Details Panel */}
-      {isDetailsExpanded && (
-        <div className="border-t border-neutral-100 bg-neutral-50/50 p-4 animate-in slide-in-from-top-2 duration-200">
-           {/* Header Context removed per requirements */}
+             <div className="bg-white border border-neutral-200 rounded-lg p-4 shadow-sm space-y-4">
+                
+                {/* 1. Usage Breakdown */}
+                {(step.tokensTotal !== undefined || step.tokensIn !== undefined) && (
+                  <div>
+                     <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider flex items-center gap-2">
+                       <Coins size={12} /> Usage Breakdown
+                     </h4>
+                     <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-neutral-50 p-2 rounded border border-neutral-100">
+                          <div className="text-[10px] text-neutral-500">Total Tokens</div>
+                          <div className="text-sm font-bold text-neutral-900 font-mono">{step.tokensTotal || 0}</div>
+                        </div>
+                        <div className="bg-neutral-50 p-2 rounded border border-neutral-100">
+                          <div className="text-[10px] text-neutral-500">Input Tokens</div>
+                          <div className="text-sm font-medium text-neutral-700 font-mono">{step.tokensIn || 0}</div>
+                        </div>
+                        <div className="bg-neutral-50 p-2 rounded border border-neutral-100">
+                          <div className="text-[10px] text-neutral-500">Output Tokens</div>
+                          <div className="text-sm font-medium text-neutral-700 font-mono">{step.tokensOut || 0}</div>
+                        </div>
+                     </div>
+                  </div>
+                )}
 
-           <div className="grid grid-cols-1 gap-6">
-              
-              {/* 1. Usage Breakdown */}
-              {(step.tokensTotal !== undefined || step.tokensIn !== undefined) && (
+                {/* 2. Configuration */}
                 <div>
-                   <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider">Usage Breakdown</h4>
-                   <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-white p-2 rounded border border-neutral-200 text-center">
-                        <div className="text-[10px] text-neutral-500 mb-0.5">Total Tokens</div>
-                        <div className="text-sm font-bold text-neutral-900 font-mono">{step.tokensTotal || 0}</div>
+                   <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider flex items-center gap-2">
+                     <Zap size={12} /> Configuration
+                   </h4>
+                   <div className="text-xs space-y-1">
+                      <div className="flex">
+                         <span className="w-24 text-neutral-500 font-medium">Model</span>
+                         <span className="font-mono text-neutral-900">{step.model || '-'}</span>
                       </div>
-                      <div className="bg-white p-2 rounded border border-neutral-200 text-center">
-                        <div className="text-[10px] text-neutral-500 mb-0.5">Input Tokens</div>
-                        <div className="text-sm font-medium text-neutral-700 font-mono">{step.tokensIn || 0}</div>
-                      </div>
-                      <div className="bg-white p-2 rounded border border-neutral-200 text-center">
-                        <div className="text-[10px] text-neutral-500 mb-0.5">Output Tokens</div>
-                        <div className="text-sm font-medium text-neutral-700 font-mono">{step.tokensOut || 0}</div>
+                      {/* Mock Parameters */}
+                      <div className="flex">
+                         <span className="w-24 text-neutral-500 font-medium">Temperature</span>
+                         <span className="font-mono text-neutral-900">0.7</span>
                       </div>
                    </div>
                 </div>
-              )}
 
-              {/* 2. Configuration & IO */}
-              <div>
-                 <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider">Configuration & I/O</h4>
-                 <div className="bg-white border border-neutral-200 rounded-md text-xs divide-y divide-neutral-50">
-                    <div className="grid grid-cols-4 p-2.5">
-                       <span className="text-neutral-500 font-medium">Model</span>
-                       <span className="col-span-3 font-mono text-neutral-900">{step.model || '-'}</span>
-                    </div>
-                    {/* Add Parameters if available in mock data (currently mock data structure might not support it fully but adding placeholder) */}
-                    
-                    {step.input && (
-                      <div className="grid grid-cols-4 p-2.5">
-                         <span className="text-neutral-500 font-medium pt-0.5">Input</span>
-                         <code className="col-span-3 font-mono text-neutral-600 break-all bg-neutral-50 p-1.5 rounded">{step.input}</code>
+                {/* 3. Performance */}
+                <div>
+                  <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider flex items-center gap-2">
+                    <Clock3 size={12} /> Performance
+                  </h4>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-xs">
+                      <div className="flex justify-between border-b border-neutral-50 pb-1">
+                         <span className="text-neutral-500">Duration</span>
+                         <span className="font-mono text-neutral-900">{step.durationMs}ms</span>
                       </div>
-                    )}
-                    {(step.output || step.error) && (
-                      <div className="grid grid-cols-4 p-2.5">
-                         <span className={`font-medium pt-0.5 ${step.error ? 'text-red-500' : 'text-neutral-500'}`}>
-                           {step.error ? 'Error' : 'Output'}
+                      <div className="flex justify-between border-b border-neutral-50 pb-1">
+                         <span className="text-neutral-500">Finish Reason</span>
+                         <span className="font-mono text-neutral-900">{step.finishReason || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                         <span className="text-neutral-500">Start Time</span>
+                         <span className="font-mono text-neutral-600">
+                           {new Date(step.startTime).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3 } as any)}
                          </span>
-                         <code className={`col-span-3 font-mono break-all p-1.5 rounded ${step.error ? 'bg-red-50 text-red-700' : 'bg-neutral-50 text-neutral-600'}`}>
-                           {step.error || step.output}
-                         </code>
                       </div>
-                    )}
-                 </div>
-              </div>
-
-              {/* 3. Performance */}
-              <div>
-                <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider">Performance</h4>
-                <div className="bg-white border border-neutral-200 rounded-md text-xs flex items-center divide-x divide-neutral-100">
-                    <div className="flex-1 p-2.5">
-                       <div className="text-neutral-500 mb-1">Finish Reason</div>
-                       <div className="font-mono text-neutral-900">{step.finishReason || '-'}</div>
-                    </div>
-                    <div className="flex-1 p-2.5">
-                       <div className="text-neutral-500 mb-1">Duration</div>
-                       <div className="font-mono text-neutral-900">{step.durationMs}ms</div>
-                    </div>
-                    <div className="flex-1 p-2.5">
-                       <div className="text-neutral-500 mb-1">Start Time</div>
-                       <div className="font-mono text-neutral-600 text-[10px]">
-                         {new Date(step.startTime).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3 } as any)}
-                       </div>
-                    </div>
-                    <div className="flex-1 p-2.5">
-                       <div className="text-neutral-500 mb-1">End Time</div>
-                       <div className="font-mono text-neutral-600 text-[10px]">
-                         {new Date(step.endTime || step.startTime).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3 } as any)}
-                       </div>
-                    </div>
+                      <div className="flex justify-between">
+                         <span className="text-neutral-500">End Time</span>
+                         <span className="font-mono text-neutral-600">
+                           {new Date(step.endTime || step.startTime).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3 } as any)}
+                         </span>
+                      </div>
+                  </div>
                 </div>
-              </div>
-
-           </div>
-        </div>
-      )}
+             </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
