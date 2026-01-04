@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import DevelopersPage from './pages/DevelopersPage';
 import DashboardPage from './pages/DashboardPage';
 import FinancePage from './pages/FinancePage';
+import ProductsPage from './pages/ProductsPage';
 import { ViewState } from './types';
 
 const App: React.FC = () => {
@@ -14,6 +15,8 @@ const App: React.FC = () => {
     switch (currentView) {
       case ViewState.DASHBOARD:
         return <DashboardPage />;
+      case ViewState.PRODUCTS:
+        return <ProductsPage />;
       case ViewState.DEVELOPERS:
         return <DevelopersPage />;
       case ViewState.FINANCE:

@@ -108,3 +108,52 @@ export interface Delivery {
     url: string;
   }[];
 }
+
+// --- Product Catalog Types ---
+
+export type ProductStatus = 'draft' | 'published' | 'archived';
+
+export type RevenueModel = 'one_time' | 'subscription' | 'usage_based';
+
+export interface Product {
+  id: string;
+  merchantId: string;
+  name: string;
+  description?: string;
+  status: ProductStatus;
+  revenueModel: RevenueModel;
+  defaultPrice?: Price;
+  createdAt: string;
+  updatedAt: string;
+  last7dPayments?: number;
+}
+
+export interface Price {
+  id: string;
+  productId: string;
+  revenueModel: RevenueModel;
+  currency: string;
+  isDefault: boolean;
+  // One-time
+  amount?: number;
+  // Subscription
+  billingPeriod?: 'monthly' | 'yearly';
+  trialPeriodDays?: number;
+  // Usage-based
+  unitAmount?: number;
+  usageUnitName?: string;
+  usageUnitDescription?: string;
+  minimumCharge?: number;
+}
+
+export interface PaymentLink {
+  id: string;
+  productId: string;
+  priceId: string;
+  url: string;
+  status: 'active' | 'disabled';
+  createdAt: string;
+  clicks: number;
+  leads: number; // Checkout started
+  sales: number; // Paid
+}
