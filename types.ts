@@ -157,3 +157,54 @@ export interface PaymentLink {
   leads: number; // Checkout started
   sales: number; // Paid
 }
+
+// --- Order & Payments Module Types ---
+
+export type OrderStatus = 'paid' | 'failed' | 'refunded' | 'partially_refunded' | 'pending';
+
+export interface Order {
+  id: string;
+  merchantId: string;
+  productId?: string;
+  productName?: string; // Denormalized for display
+  customerEmail: string;
+  customerExternalId?: string;
+  amount: number;
+  currency: string;
+  status: OrderStatus;
+  createdAt: string; // ISO Date
+  
+  // Stripe Context
+  stripeObject: 'payment_intent' | 'charge' | 'checkout_session' | 'invoice';
+  stripeObjectId: string;
+  stripeDashboardUrl: string;
+  
+  // Details
+  paymentMethod?: {
+    type: string; // 'card'
+    brand: string; // 'visa', 'mastercard'
+    last4: string;
+    expMonth: number;
+    expYear: number;
+    country: string;
+    cvcCheck: 'pass' | 'fail' | 'unavailable';
+    zipCheck: 'pass' | 'fail' | 'unavailable';
+    ownerName?: string;
+    ownerEmail?: string;
+    billingAddress?: string;
+  };
+  
+  fees?: {
+    processing: number;
+    net: number;
+  };
+
+  timeline?: TimelineEvent[];
+}
+
+export interface TimelineEvent {
+  id: string;
+  type: 'payment_started' | 'payment_authorized' | 'payment_captured' | 'payment_failed' | 'refund_created';
+  timestamp: string;
+  description?: string;
+}
