@@ -208,3 +208,53 @@ export interface TimelineEvent {
   timestamp: string;
   description?: string;
 }
+
+// --- Finance & Connect Module Types ---
+
+export type ConnectStatusType = 'not_connected' | 'restricted' | 'enabled';
+
+export interface ConnectStatus {
+  merchantId: string;
+  stripeAccountId?: string;
+  status: ConnectStatusType;
+  disabledReason?: string;
+  requirementsDue?: string[];
+}
+
+export interface Balance {
+  currency: string;
+  availableAmount: number;
+  onTheWayAmount: number;
+  updatedAt: string;
+}
+
+export type PayoutStatus = 'paid' | 'pending' | 'in_transit' | 'failed' | 'canceled';
+
+export interface Payout {
+  id: string;
+  merchantId: string;
+  amount: number;
+  currency: string;
+  status: PayoutStatus;
+  arrivalDate?: string;
+  destinationDisplay?: string;
+  stripePayoutId: string;
+  stripeDashboardUrl?: string;
+  createdAt: string;
+  failureReason?: string;
+  internalNote?: string;
+  statementDescriptor?: string;
+}
+
+export interface BalanceActivity {
+  id: string;
+  merchantId: string;
+  type: 'payment' | 'payout' | 'refund' | 'fee' | 'adjustment';
+  amount: number;
+  currency: string;
+  fees?: number;
+  netAmount?: number;
+  description?: string;
+  createdAt: string;
+  availableOn?: string;
+}
