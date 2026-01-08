@@ -22,7 +22,6 @@ import {
   ConnectStatusType, 
   Balance, 
   Payout, 
-  BalanceActivity, 
   PayoutStatus 
 } from '../types';
 
@@ -87,43 +86,6 @@ const MOCK_PAYOUTS: Payout[] = [
     destinationDisplay: 'Chase ****4242',
     stripePayoutId: 'po_123458',
     createdAt: '2025-12-28T14:15:00Z'
-  }
-];
-
-const MOCK_ACTIVITIES: BalanceActivity[] = [
-  {
-    id: 'txn_1',
-    merchantId: 'm_123',
-    type: 'payment',
-    amount: 100.00,
-    currency: 'USD',
-    fees: -3.20,
-    netAmount: 96.80,
-    description: 'Payment from customer@example.com',
-    createdAt: '2026-01-06T15:00:00Z',
-    availableOn: '2026-01-08'
-  },
-  {
-    id: 'txn_2',
-    merchantId: 'm_123',
-    type: 'payout',
-    amount: -1500.00,
-    currency: 'USD',
-    fees: 0,
-    netAmount: -1500.00,
-    description: 'Payout to Chase ****4242',
-    createdAt: '2026-01-03T10:00:00Z'
-  },
-  {
-    id: 'txn_3',
-    merchantId: 'm_123',
-    type: 'refund',
-    amount: -50.00,
-    currency: 'USD',
-    fees: 3.20,
-    netAmount: -46.80,
-    description: 'Refund for order #1234',
-    createdAt: '2026-01-02T11:20:00Z'
   }
 ];
 
@@ -327,7 +289,6 @@ const FinancePage: React.FC = () => {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [balance, setBalance] = useState(MOCK_BALANCE);
   const [payouts, setPayouts] = useState(MOCK_PAYOUTS);
-  const [activities, setActivities] = useState(MOCK_ACTIVITIES);
   const [pageSize, setPageSize] = useState(20);
 
   const currentStatus = MOCK_CONNECT_STATUS[devConnectStatus];
@@ -353,21 +314,7 @@ const FinancePage: React.FC = () => {
       statementDescriptor: descriptor
     };
     
-    const newActivity: BalanceActivity = {
-      id: `txn_new_${Date.now()}`,
-      merchantId: 'm_123',
-      type: 'payout',
-      amount: -amount,
-      currency: 'USD',
-      fees: 0,
-      netAmount: -amount,
-      description: descriptor || 'Payout to Chase ****4242',
-      createdAt: new Date().toISOString(),
-      availableOn: new Date().toISOString().split('T')[0]
-    };
-    
     setPayouts(prev => [newPayout, ...prev]);
-    setActivities(prev => [newActivity, ...prev]);
   };
 
   const getWithdrawDisabledReason = () => {
@@ -588,66 +535,6 @@ const FinancePage: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Balance Activity */}
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-neutral-900">Balance activity</h2>
-                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[800px]">
-                      <thead className="bg-neutral-50 border-b border-neutral-200">
-                        <tr>
-                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider text-right w-32">Amount</th>
-                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider text-right w-24">Fees</th>
-                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider text-right w-32">Total</th>
-                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-32">Type</th>
-                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Description</th>
-                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-40 text-right">Created</th>
-                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-40 text-right">Available on</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-100">
-                        {activities.length > 0 ? (
-                          activities.map((activity) => (
-                            <tr key={activity.id} className="hover:bg-neutral-50 transition-colors">
-                              <td className="px-6 py-4 text-sm font-mono text-neutral-900 text-right">
-                                {activity.amount > 0 ? '+' : ''}{activity.amount.toFixed(2)}
-                              </td>
-                              <td className="px-6 py-4 text-sm font-mono text-neutral-500 text-right">
-                                {activity.fees ? activity.fees.toFixed(2) : '-'}
-                              </td>
-                              <td className="px-6 py-4 text-sm font-mono font-medium text-neutral-900 text-right">
-                                {activity.netAmount ? activity.netAmount.toFixed(2) : activity.amount.toFixed(2)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-neutral-600 capitalize">
-                                {activity.type}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-neutral-600 truncate max-w-xs">
-                                {activity.description}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-neutral-500 text-right font-mono">
-                                {formatDateTime(activity.createdAt)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-neutral-500 text-right font-mono">
-                                {activity.availableOn || '-'}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={7} className="px-6 py-12 text-center text-neutral-500 text-sm">
-                              No balance activity yet.
-                              <p className="text-xs text-neutral-400 mt-1">
-                                View <span className="underline cursor-pointer hover:text-neutral-600">Orders</span> to see incoming payments.
-                              </p>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
                   </div>
                 </div>
               </div>
