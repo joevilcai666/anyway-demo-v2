@@ -301,3 +301,105 @@ export function validateUseCaseCategory(category: string): { isValid: boolean; e
   }
   return { isValid: true };
 }
+
+// ============================================================================
+// Onboarding Validation Utilities
+// ============================================================================
+
+/**
+ * Validate email format
+ * @param email - Email address to validate
+ * @returns Object with isValid flag and error message
+ */
+export function validateEmail(email: string): { isValid: boolean; error?: string } {
+  if (!email || email.trim().length === 0) {
+    return { isValid: false, error: 'Please enter a valid email address' };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { isValid: false, error: 'Please enter a valid email address' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validate invitation code (5 digits)
+ * @param code - Invitation code to validate
+ * @returns Object with isValid flag and error message
+ */
+export function validateInvitationCode(code: string): { isValid: boolean; error?: string } {
+  if (!code || code.trim().length === 0) {
+    return { isValid: false, error: 'Please enter your invitation code' };
+  }
+
+  if (!/^\d{5}$/.test(code)) {
+    return { isValid: false, error: 'Invitation code must be 5 digits' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validate full name
+ * @param name - Full name to validate
+ * @returns Object with isValid flag and error message
+ */
+export function validateFullName(name: string): { isValid: boolean; error?: string } {
+  if (!name || name.trim().length === 0) {
+    return { isValid: false, error: 'Please enter your full name' };
+  }
+
+  if (name.length < 2) {
+    return { isValid: false, error: 'Name must be at least 2 characters' };
+  }
+
+  if (name.length > 100) {
+    return { isValid: false, error: 'Name must be 100 characters or less' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validate company name
+ * @param name - Company name to validate
+ * @returns Object with isValid flag and error message
+ */
+export function validateCompanyName(name: string): { isValid: boolean; error?: string } {
+  if (!name || name.trim().length === 0) {
+    return { isValid: false, error: 'Please enter your company name' };
+  }
+
+  if (name.length < 2) {
+    return { isValid: false, error: 'Company name must be at least 2 characters' };
+  }
+
+  if (name.length > 255) {
+    return { isValid: false, error: 'Company name must be 255 characters or less' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validate use case (20-500 characters)
+ * @param text - Use case text to validate
+ * @returns Object with isValid flag and error message
+ */
+export function validateOnboardingUseCase(text: string): { isValid: boolean; error?: string } {
+  if (!text || text.trim().length === 0) {
+    return { isValid: false, error: 'Please describe your use case' };
+  }
+
+  if (text.length < 20) {
+    return { isValid: false, error: 'Use case must be at least 20 characters' };
+  }
+
+  if (text.length > 500) {
+    return { isValid: false, error: 'Use case must be 500 characters or less' };
+  }
+
+  return { isValid: true };
+}

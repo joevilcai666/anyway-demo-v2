@@ -21,11 +21,11 @@ interface SidebarProps {
   toggleCollapse: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  currentView, 
-  onChangeView, 
+const Sidebar: React.FC<SidebarProps> = ({
+  currentView,
+  onChangeView,
   isCollapsed,
-  toggleCollapse 
+  toggleCollapse,
 }) => {
   const [isAccountPanelOpen, setIsAccountPanelOpen] = useState(false);
   const accountButtonRef = useRef<HTMLButtonElement>(null);
@@ -78,14 +78,24 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span className="font-bold text-lg tracking-tight text-neutral-900 whitespace-nowrap">Anyway</span>
           )}
         </div>
-        
+
+        {/* Get Started Button (when not collapsed) */}
+        {!isCollapsed && (
+          <button
+            onClick={() => onChangeView(ViewState.EMAIL_INPUT)}
+            className="ml-auto px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-sm font-medium rounded-full transition-all duration-150 shadow-sm hover:shadow-md"
+          >
+            Get Started
+          </button>
+        )}
+
         {/* Collapse Toggle */}
         <button
           onClick={toggleCollapse}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           className={`
-            absolute top-5 p-1 rounded-md text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors
-            ${isCollapsed ? 'left-1/2 -translate-x-1/2 top-16 mt-2' : 'right-4'}
+            ml-2 p-1 rounded-md text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors
+            ${isCollapsed ? 'absolute left-1/2 -translate-x-1/2 top-16 mt-2' : ''}
           `}
         >
           {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}

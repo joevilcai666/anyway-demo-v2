@@ -1,4 +1,7 @@
 export enum ViewState {
+  EMAIL_INPUT = 'email_input',
+  INVITATION_CODE = 'invitation_code',
+  SURVEY = 'survey',
   DASHBOARD = 'dashboard',
   PRODUCTS = 'products',
   ORDERS = 'orders',
@@ -328,4 +331,32 @@ export interface BalanceActivity {
   description?: string;
   createdAt: string;
   availableOn?: string;
+}
+
+// --- Onboarding Module Types ---
+
+export type OnboardingStep =
+  | 'email_input'
+  | 'path_selection'
+  | 'invitation_code'
+  | 'request_access'
+  | 'success';
+
+export type OnboardingPath = 'with_code' | 'request_access';
+
+export interface OnboardingFormData {
+  email: string;
+  invitationCode?: string;
+  fullName?: string;
+  companyName?: string;
+  useCase?: string;
+  source?: string;
+}
+
+export interface OnboardingUser {
+  id: string;
+  email: string;
+  fullName?: string;
+  invitationCode?: string;
+  createdAt: string;
 }
