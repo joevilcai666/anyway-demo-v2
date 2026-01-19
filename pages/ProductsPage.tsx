@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus,
-  Search,
-  Filter,
   MoreHorizontal,
   Box,
-  ExternalLink,
+  Edit,
+  Archive,
   ChevronRight,
-  Link as LinkIcon,
 } from 'lucide-react';
-import { Product, ProductStatus, RevenueModel } from '../types';
+import { Product, ProductStatus } from '../types';
 import ProductCreateWizard from './ProductCreateWizard';
+import ProductEditWizard from './ProductEditWizard';
 import ProductDetailPage from './ProductDetailPage';
 import PaymentLinkWizard from './PaymentLinkWizard';
-import { mockProducts, getPaymentLinksCount } from '../constants';
+import { mockProducts } from '../constants';
+import { formatDate } from '../utils';
 
 // --- Components ---
 
@@ -31,44 +31,45 @@ const StatusBadge: React.FC<{ status: ProductStatus }> = ({ status }) => {
   );
 };
 
-const ModelBadge: React.FC<{ model: RevenueModel }> = ({ model }) => {
-  const labels = {
-    one_time: 'One-time',
-    subscription: 'Subscription',
-    usage_based: 'Usage-based',
-  };
-
-  const styles = {
-    one_time: 'bg-amber-50 text-amber-700 border-amber-200',
-    subscription: 'bg-blue-50 text-blue-700 border-blue-200',
-    usage_based: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  };
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${styles[model]}`}>
-      {labels[model]}
-    </span>
-  );
-};
-
-const LinksCount: React.FC<{ count: number }> = ({ count }) => {
-  return (
-    <div className="flex items-center gap-1.5 text-neutral-600">
-      <LinkIcon size={14} strokeWidth={2} />
-      <span className="text-sm font-medium">{count} {count === 1 ? 'link' : 'links'}</span>
-    </div>
-  );
-};
-
 // --- Main Page Component ---
 
 const ProductsPage: React.FC = () => {
-  const [view, setView] = useState<'list' | 'create' | 'detail' | 'payment_link_wizard'>('list');
-  const [products] = useState<Product[]>(mockProducts);
+  const [view, setView] = useState<'list' | 'create' | 'detail' | 'payment_link_wizard' | 'edit'>('list');
+  const [products, setProducts] = useState<Product[]>(mockProducts);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<ProductStatus | 'all'>('all');
+  const [activeMenuProductId, setActiveMenuProductId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setActiveMenuProductId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const filteredProducts = products.filter((p) => filterStatus === 'all' || p.status === filterStatus);
+
+  // Handle menu actions
+  const handleEditProduct = (productId: string) => {
+    setActiveMenuProductId(null);
+    setSelectedProductId(productId);
+    setView('edit');
+  };
+
+  const handleDeactivateProduct = (productId: string) => {
+    setActiveMenuProductId(null);
+    setProducts(products.map(p =>
+      p.id === productId ? { ...p, status: 'archived' as ProductStatus } : p
+    ));
+  };
 
   if (view === 'create') {
     return (
@@ -76,6 +77,27 @@ const ProductsPage: React.FC = () => {
         onBack={() => setView('list')}
         onComplete={() => {
           setView('list');
+        }}
+      />
+    );
+  }
+
+  if (view === 'edit' && selectedProductId) {
+    return (
+      <ProductEditWizard
+        productId={selectedProductId}
+        onBack={() => {
+          setSelectedProductId(null);
+          setView('list');
+        }}
+        onSave={(updatedData) => {
+          console.log('Product updated:', updatedData);
+          // Update the product in the list
+          setProducts(products.map(p =>
+            p.id === selectedProductId
+              ? { ...p, name: updatedData.name, deliverable_description: updatedData.description }
+              : p
+          ));
         }}
       />
     );
@@ -89,7 +111,9 @@ const ProductsPage: React.FC = () => {
           setSelectedProductId(null);
           setView('list');
         }}
-        onEditProduct={() => console.log('Edit product')}
+        onEditProduct={() => {
+          setView('edit');
+        }}
         onCreatePaymentLink={() => setView('payment_link_wizard')}
       />
     );
@@ -155,43 +179,45 @@ const ProductsPage: React.FC = () => {
               <thead>
                 <tr className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wider text-neutral-500 font-semibold">
                   <th className="px-6 py-3 font-medium">Product</th>
-                  <th className="px-6 py-3 font-medium">Revenue Model</th>
-                  <th className="px-6 py-3 font-medium">Links</th>
+                  <th className="px-6 py-3 font-medium">Descriptions</th>
                   <th className="px-6 py-3 font-medium text-center">Status</th>
-                  <th className="px-4 py-3 w-10"></th>
+                  <th className="px-6 py-3 font-medium">Created</th>
+                  <th className="px-4 py-3 w-16"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {filteredProducts.map((product) => {
-                  const linksCount = getPaymentLinksCount(product.id);
+                  const isMenuActive = activeMenuProductId === product.id;
 
                   return (
                     <tr
                       key={product.id}
-                      onClick={() => {
-                        setSelectedProductId(product.id);
-                        setView('detail');
-                      }}
                       className="group hover:bg-neutral-50 transition-colors cursor-pointer"
                     >
                       {/* Product Name */}
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-neutral-900 text-sm">{product.name}</div>
-                        {product.deliverable_description && (
-                          <div className="text-xs text-neutral-500 mt-0.5 truncate max-w-[280px] leading-relaxed">
-                            {product.deliverable_description}
-                          </div>
-                        )}
+                        <div
+                          className="font-semibold text-neutral-900 text-sm"
+                          onClick={() => {
+                            setSelectedProductId(product.id);
+                            setView('detail');
+                          }}
+                        >
+                          {product.name}
+                        </div>
                       </td>
 
-                      {/* Revenue Model */}
+                      {/* Descriptions */}
                       <td className="px-6 py-4">
-                        <ModelBadge model={product.revenueModel} />
-                      </td>
-
-                      {/* Links Count */}
-                      <td className="px-6 py-4">
-                        <LinksCount count={linksCount} />
+                        <div
+                          className="text-xs text-neutral-600 truncate max-w-[300px] leading-relaxed"
+                          onClick={() => {
+                            setSelectedProductId(product.id);
+                            setView('detail');
+                          }}
+                        >
+                          {product.deliverable_description || <span className="text-neutral-400 italic">No description</span>}
+                        </div>
                       </td>
 
                       {/* Status */}
@@ -199,9 +225,50 @@ const ProductsPage: React.FC = () => {
                         <StatusBadge status={product.status} />
                       </td>
 
-                      {/* Chevron */}
-                      <td className="px-4 py-4 text-right text-neutral-400">
-                        <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {/* Created */}
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-neutral-600">{formatDate(product.createdAt)}</span>
+                      </td>
+
+                      {/* Three-dot Menu */}
+                      <td className="px-4 py-4 text-right">
+                        <div className="relative inline-block" ref={isMenuActive ? menuRef : null}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuProductId(isMenuActive ? null : product.id);
+                            }}
+                            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-400 hover:text-neutral-600"
+                          >
+                            <MoreHorizontal size={18} strokeWidth={2} />
+                          </button>
+
+                          {/* Dropdown Menu */}
+                          {isMenuActive && (
+                            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 animate-in fade-in slide-in-from-top-1 duration-100">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditProduct(product.id);
+                                }}
+                                className="w-full px-4 py-2.5 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-50 flex items-center gap-3 transition-colors"
+                              >
+                                <Edit size={16} strokeWidth={2} />
+                                Edit Product
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeactivateProduct(product.id);
+                                }}
+                                className="w-full px-4 py-2.5 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-50 flex items-center gap-3 transition-colors border-t border-neutral-100"
+                              >
+                                <Archive size={16} strokeWidth={2} />
+                                Deactivate
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

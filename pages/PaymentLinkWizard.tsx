@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -7,13 +7,11 @@ import {
   Copy,
   ExternalLink,
   Link as LinkIcon,
-  Tag,
 } from 'lucide-react';
-import { RevenueModel, PricingAssistantState, PricingAssistantFormData, PricingRecommendation } from '../types';
-import { RevenueModelSelector } from '../components/RevenueModelSelector';
-import { PricingAssistant } from '../components/PricingAssistant';
-import { DraftSaveIndicator, useDraftAutoSave } from '../components/DraftSaveIndicator';
-import { formatPrice, generatePricingRecommendation, copyToClipboard, validateProductName, validatePriceAmount, validateUnitName } from '../utils';
+import ProductForm, { ProductFormData, getPageTitle } from '../components/ProductForm';
+import { copyToClipboard } from '../utils';
+import { Product, RevenueModel } from '../types';
+import { mockProducts, getPricesByProduct } from '../constants';
 
 interface PaymentLinkWizardProps {
   productId: string;
@@ -76,168 +74,63 @@ const StepIndicator: React.FC<{ currentStep: Step }> = ({ currentStep }) => {
   );
 };
 
-const PaymentLinkWizard: React.FC<PaymentLinkWizardProps> = ({ productId, productName, onBack, onComplete }) => {
+const PaymentLinkWizard: React.FC<PaymentLinkWizardProps> = ({
+  productId,
+  productName: providedProductName,
+  onBack,
+  onComplete,
+}) => {
   const [currentStep, setCurrentStep] = useState<Step>('price_config');
 
-  // Form State
-  const [formData, setFormData] = useState({
-    priceName: '',
-    linkName: '',
-    revenueModel: 'one_time' as RevenueModel,
-    priceAmount: '',
-    billingPeriod: 'monthly' as 'monthly' | 'yearly',
-    usageUnitName: '',
-  });
+  // Product data
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Validation State
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Pricing Assistant State
-  const [pricingAssistantState, setPricingAssistantState] = useState<PricingAssistantState>('empty');
-  const [pricingFormData, setPricingFormData] = useState<PricingAssistantFormData>({});
-  const [pricingRecommendation, setPricingRecommendation] = useState<PricingRecommendation>();
-  const [pricingError, setPricingError] = useState<{ message: string; details?: string }>();
+  // Form State (managed by ProductForm)
+  const [formData, setFormData] = useState<ProductFormData | null>(null);
 
   // Payment Link State
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
 
-  // Auto-save draft
-  const draftSave = useDraftAutoSave(
-    formData,
-    async (data) => {
-      // Mock API call to save draft
-      console.log('Saving payment link draft:', data);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return true;
-    },
-    5000 // 5 second throttle
-  );
+  // Load product data
+  useEffect(() => {
+    const loadProduct = () => {
+      setIsLoading(true);
+      // Mock API call to load product
+      setTimeout(() => {
+        const foundProduct = mockProducts.find((p) => p.id === productId);
+        if (foundProduct) {
+          setProduct(foundProduct);
+        }
+        setIsLoading(false);
+      }, 300);
+    };
 
-  // Validate form
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    loadProduct();
+  }, [productId]);
 
-    // Validate price name
-    const priceNameValidation = validateProductName(formData.priceName);
-    if (!priceNameValidation.isValid) {
-      newErrors.priceName = priceNameValidation.error!;
-    }
+  // Get product name
+  const productName = providedProductName || product?.name;
 
-    // Validate link name
-    const linkNameValidation = validateProductName(formData.linkName);
-    if (!linkNameValidation.isValid) {
-      newErrors.linkName = linkNameValidation.error!;
-    }
+  // Get initial data for ProductForm
+  const getInitialData = () => {
+    if (!product) return undefined;
 
-    // Validate price amount
-    if (formData.priceAmount) {
-      const priceValidation = validatePriceAmount(parseFloat(formData.priceAmount));
-      if (!priceValidation.isValid) {
-        newErrors.priceAmount = priceValidation.error!;
-      }
-    }
-
-    // Validate unit name for usage-based
-    if (formData.revenueModel === 'usage_based' && formData.usageUnitName) {
-      const unitValidation = validateUnitName(formData.usageUnitName);
-      if (!unitValidation.isValid) {
-        newErrors.usageUnitName = unitValidation.error!;
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle revenue model change
-  const handleRevenueModelChange = (model: RevenueModel) => {
-    setFormData((prev) => ({
-      ...prev,
-      revenueModel: model,
+    return {
+      name: product.name,
+      description: product.deliverable_description || '',
+      revenueModel: product.revenueModel,
       priceAmount: '',
+      billingPeriod: 'monthly' as const,
       usageUnitName: '',
-    }));
-
-    // Reset Pricing Assistant when model changes
-    setPricingAssistantState('empty');
-    setPricingRecommendation(undefined);
-    setErrors({});
+    };
   };
 
-  // Handle Pricing Assistant form change
-  const handlePricingFormChange = (data: PricingAssistantFormData) => {
-    setPricingFormData(data);
-  };
-
-  // Handle Pricing Assistant submit
-  const handlePricingSubmit = async () => {
-    setPricingAssistantState('loading');
-    setPricingError(undefined);
-
-    try {
-      const recommendation = await generatePricingRecommendation(pricingFormData);
-      setPricingRecommendation(recommendation);
-      setPricingAssistantState('success');
-    } catch (error) {
-      setPricingError({
-        message: 'Failed to generate pricing suggestion',
-        details: error instanceof Error ? error.message : 'Please try again',
-      });
-      setPricingAssistantState('error');
-    }
-  };
-
-  // Handle Apply Price from Pricing Assistant
-  const handleApplyPrice = (priceType: 'min' | 'typical' | 'max') => {
-    if (!pricingRecommendation) return;
-
-    const price =
-      priceType === 'min'
-        ? pricingRecommendation.recommended_min_price
-        : priceType === 'typical'
-          ? pricingRecommendation.recommended_typical_price
-          : pricingRecommendation.recommended_max_price;
-
-    setFormData((prev) => ({ ...prev, priceAmount: price.toString() }));
-    setErrors({});
-
-    // Track which price type was applied
-    setPricingRecommendation((prev) =>
-      prev
-        ? {
-            ...prev,
-            applied_price_type: priceType,
-          }
-        : undefined
-    );
-
-    // Smooth scroll to price field
-    setTimeout(() => {
-      const priceField = document.getElementById('price-amount-field');
-      priceField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      priceField?.focus();
-    }, 100);
-  };
-
-  // Handle Regenerate
-  const handleRegenerate = () => {
-    setPricingAssistantState('form');
-    setPricingRecommendation(undefined);
-  };
-
-  // Handle Dismiss
-  const handleDismiss = () => {
-    setPricingAssistantState('empty');
-    setPricingFormData({});
-    setPricingRecommendation(undefined);
-  };
-
-  const handleNext = () => {
-    if (validateForm()) {
-      setCurrentStep('generate_link');
-    }
+  const handleNext = (data: ProductFormData) => {
+    setFormData(data);
+    setCurrentStep('generate_link');
   };
 
   const handleBack = () => {
@@ -266,194 +159,47 @@ const PaymentLinkWizard: React.FC<PaymentLinkWizardProps> = ({ productId, produc
     }
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
+        {/* Header */}
+        <header className="bg-white border-b border-neutral-200 px-6 py-4 sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto flex items-center gap-4">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-500"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-lg font-bold text-neutral-900">{getPageTitle('create-link')}</h1>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto py-8 px-6">
+          <div className="max-w-7xl mx-auto flex items-center justify-center py-20">
+            <div className="text-center">
+              <Loader2 size={40} className="animate-spin text-neutral-400 mx-auto mb-4" />
+              <p className="text-neutral-500">Loading product...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // --- Render Steps ---
 
   const renderStep1 = () => (
-    <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Left Column: Main Form (65%) */}
-      <div className="lg:col-span-2 space-y-8">
-        <div>
-          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Price Configuration</h2>
-          <p className="text-neutral-500">
-            {productName ? `Creating payment link for "${productName}"` : 'Configure your price and link'}
-          </p>
-        </div>
-
-        <div className="space-y-8">
-          {/* Price Name */}
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-1.5">
-              <div className="flex items-center gap-2">
-                <Tag size={16} className="text-neutral-500" />
-                Price name <span className="text-red-500">*</span>
-              </div>
-            </label>
-            <input
-              type="text"
-              value={formData.priceName}
-              onChange={(e) => setFormData({ ...formData, priceName: e.target.value })}
-              placeholder="e.g. Basic Tier, Pro Tier, Enterprise Plan"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all ${
-                errors.priceName ? 'border-red-300 bg-red-50' : 'border-neutral-300 bg-white'
-              }`}
-              autoFocus
-            />
-            {errors.priceName && <p className="mt-1.5 text-sm text-red-600">{errors.priceName}</p>}
-            <p className="mt-1.5 text-sm text-neutral-500">
-              A name to identify this price (e.g., "Basic Tier").
-            </p>
-          </div>
-
-          {/* Link Name */}
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-1.5">
-              <div className="flex items-center gap-2">
-                <LinkIcon size={16} className="text-neutral-500" />
-                Link name <span className="text-red-500">*</span>
-              </div>
-            </label>
-            <input
-              type="text"
-              value={formData.linkName}
-              onChange={(e) => setFormData({ ...formData, linkName: e.target.value })}
-              placeholder="e.g. Twitter Campaign, Email Promo, Direct Purchase"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all ${
-                errors.linkName ? 'border-red-300 bg-red-50' : 'border-neutral-300 bg-white'
-              }`}
-            />
-            {errors.linkName && <p className="mt-1.5 text-sm text-red-600">{errors.linkName}</p>}
-            <p className="mt-1.5 text-sm text-neutral-500">
-              A name to identify this payment link (e.g., "Twitter Campaign").
-            </p>
-          </div>
-
-          {/* Revenue Model Selector */}
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-3">
-              Revenue model <span className="text-red-500">*</span>
-            </label>
-            <RevenueModelSelector
-              selectedModel={formData.revenueModel}
-              onSelect={handleRevenueModelChange}
-            />
-          </div>
-
-          {/* Price Configuration */}
-          <div className="bg-white p-6 border border-neutral-200 rounded-xl shadow-sm space-y-6">
-            <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">
-              Set your price
-            </h3>
-
-            {/* Price Amount */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                {formData.revenueModel === 'usage_based' ? 'Unit price' : 'Price amount'}{' '}
-                <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 font-bold text-lg">
-                  $
-                </span>
-                <input
-                  id="price-amount-field"
-                  type="number"
-                  value={formData.priceAmount}
-                  onChange={(e) => {
-                    setFormData({ ...formData, priceAmount: e.target.value });
-                    if (errors.priceAmount) setErrors({ ...errors, priceAmount: undefined });
-                  }}
-                  placeholder="0.00"
-                  className={`w-full pl-10 pr-4 py-4 text-2xl border rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono font-bold transition-all ${
-                    errors.priceAmount ? 'border-red-300 bg-red-50' : 'border-neutral-300 bg-white'
-                  }`}
-                />
-              </div>
-              {errors.priceAmount && <p className="mt-1.5 text-sm text-red-600">{errors.priceAmount}</p>}
-
-              {/* Billing period for subscription */}
-              {formData.revenueModel === 'subscription' && (
-                <div className="mt-3">
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                    Billing period
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(['monthly', 'yearly'] as const).map((period) => (
-                      <button
-                        key={period}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, billingPeriod: period })}
-                        className={`px-4 py-2 border rounded-lg text-sm font-medium transition-all capitalize ${
-                          formData.billingPeriod === period
-                            ? 'border-neutral-900 bg-neutral-900 text-white'
-                            : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
-                        }`}
-                      >
-                        {period}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-sm text-neutral-500">Billed {formData.billingPeriod}</p>
-                </div>
-              )}
-
-              {/* Unit name for usage-based */}
-              {formData.revenueModel === 'usage_based' && (
-                <div className="mt-3">
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                    Unit name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.usageUnitName}
-                    onChange={(e) => {
-                      setFormData({ ...formData, usageUnitName: e.target.value });
-                      if (errors.usageUnitName) setErrors({ ...errors, usageUnitName: undefined });
-                    }}
-                    placeholder="e.g. API call, 1K tokens, run"
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 transition-all ${
-                      errors.usageUnitName ? 'border-red-300 bg-red-50' : 'border-neutral-300 bg-white'
-                    }`}
-                  />
-                  {errors.usageUnitName && (
-                    <p className="mt-1.5 text-sm text-red-600">{errors.usageUnitName}</p>
-                  )}
-                  <p className="mt-1.5 text-sm text-neutral-500">
-                    Customers will be charged per {formData.usageUnitName || 'unit'}.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Draft Save Indicator */}
-          <div className="pt-4">
-            <DraftSaveIndicator
-              status={draftSave.status}
-              lastSaved={draftSave.lastSaved}
-              errorMessage={draftSave.errorMessage}
-              onRetry={draftSave.retry}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Right Column: Pricing Assistant (35%) */}
-      <div className="lg:col-span-1">
-        <div className="sticky top-6">
-          <PricingAssistant
-            currentState={pricingAssistantState}
-            formData={pricingFormData}
-            recommendation={pricingRecommendation}
-            error={pricingError}
-            onFormChange={handlePricingFormChange}
-            onSubmit={handlePricingSubmit}
-            onApplyPrice={handleApplyPrice}
-            onRegenerate={handleRegenerate}
-            onDismiss={handleDismiss}
-          />
-        </div>
-      </div>
-    </div>
+    <ProductForm
+      mode="create-link"
+      productName={productName}
+      initialData={getInitialData()}
+      onSubmit={handleNext}
+      onBack={handleBack}
+      enableDraftSave={true}
+    />
   );
 
   const renderStep2 = () => (
@@ -467,61 +213,71 @@ const PaymentLinkWizard: React.FC<PaymentLinkWizardProps> = ({ productId, produc
       </div>
 
       {/* Summary Card */}
-      <div className="bg-white border border-neutral-200 rounded-xl shadow-sm p-6 space-y-4 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-neutral-900 mb-4">Summary</h3>
+      {formData && (
+        <div className="bg-white border border-neutral-200 rounded-xl shadow-sm p-6 space-y-4 mb-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-neutral-900 mb-4">Summary</h3>
 
-            <div className="space-y-3">
-              {/* Price Name */}
-              <div>
-                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
-                  Price name
-                </label>
-                <p className="text-base font-semibold text-neutral-900">{formData.priceName || 'Untitled Price'}</p>
-              </div>
+              <div className="space-y-3">
+                {/* Product Name */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                    Product
+                  </label>
+                  <p className="text-base font-semibold text-neutral-900">{productName}</p>
+                </div>
 
-              {/* Link Name */}
-              <div>
-                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
-                  Link name
-                </label>
-                <p className="text-base font-semibold text-neutral-900">{formData.linkName || 'Untitled Link'}</p>
-              </div>
+                {/* Price Name */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                    Price name
+                  </label>
+                  <p className="text-base font-semibold text-neutral-900">{formData.priceName || 'Untitled Price'}</p>
+                </div>
 
-              {/* Revenue Model Badge */}
-              <div>
-                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
-                  Revenue model
-                </label>
-                <p className="text-base font-medium text-neutral-700 capitalize mt-1">
-                  {formData.revenueModel.replace('_', ' ')}
-                </p>
-              </div>
+                {/* Link Name */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                    Link name
+                  </label>
+                  <p className="text-base font-semibold text-neutral-900">{formData.linkName || 'Untitled Link'}</p>
+                </div>
 
-              {/* Price */}
-              <div>
-                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
-                  Price
-                </label>
-                <p className="text-2xl font-mono font-bold text-neutral-900">
-                  ${formData.priceAmount || '0.00'}
-                  {formData.revenueModel === 'subscription' && (
-                    <span className="text-base font-sans font-normal text-neutral-600">
-                      /{formData.billingPeriod}
-                    </span>
-                  )}
-                  {formData.revenueModel === 'usage_based' && formData.usageUnitName && (
-                    <span className="text-base font-sans font-normal text-neutral-600">
-                      /{formData.usageUnitName}
-                    </span>
-                  )}
-                </p>
+                {/* Revenue Model Badge */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                    Revenue model
+                  </label>
+                  <p className="text-base font-medium text-neutral-700 capitalize mt-1">
+                    {formData.revenueModel.replace('_', ' ')}
+                  </p>
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                    Price
+                  </label>
+                  <p className="text-2xl font-mono font-bold text-neutral-900">
+                    ${formData.priceAmount || '0.00'}
+                    {formData.revenueModel === 'subscription' && (
+                      <span className="text-base font-sans font-normal text-neutral-600">
+                        /{formData.billingPeriod}
+                      </span>
+                    )}
+                    {formData.revenueModel === 'usage_based' && formData.usageUnitName && (
+                      <span className="text-base font-sans font-normal text-neutral-600">
+                        /{formData.usageUnitName}
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Generate Link Section */}
       <div className="bg-white p-6 border border-neutral-200 rounded-xl shadow-sm space-y-6">
@@ -608,7 +364,7 @@ const PaymentLinkWizard: React.FC<PaymentLinkWizardProps> = ({ productId, produc
             >
               <ArrowLeft size={20} />
             </button>
-            <h1 className="text-lg font-bold text-neutral-900">Create Payment Link</h1>
+            <h1 className="text-lg font-bold text-neutral-900">{getPageTitle('create-link')}</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -617,24 +373,6 @@ const PaymentLinkWizard: React.FC<PaymentLinkWizardProps> = ({ productId, produc
             >
               Cancel
             </button>
-            {currentStep !== 'generate_link' && (
-              <button
-                onClick={handleNext}
-                disabled={!formData.priceName || !formData.linkName || !formData.priceAmount}
-                className="px-6 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
-              >
-                Next Step
-                <ChevronRight size={16} />
-              </button>
-            )}
-            {currentStep === 'generate_link' && generatedLink && (
-              <button
-                onClick={() => onComplete('link_123')}
-                className="px-6 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-all"
-              >
-                Done
-              </button>
-            )}
           </div>
         </div>
       </header>

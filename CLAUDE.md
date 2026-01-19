@@ -86,7 +86,71 @@ const isDeleting = deleteConfirmId === link.payment_link_id;
 
 ---
 
+---
+
+## Bug #3: ProductForm 导入错误导致开发服务器崩溃
+
+**日期**: 2026-01-19
+
+**症状**:
+- 开发服务器启动后立即崩溃（exit code 137）
+- 浏览器无法访问 http://localhost:3000/
+- 多次重启服务器仍无法正常运行
+
+**根本原因**:
+在创建统一的 ProductForm 组件时，导出方式不一致导致 TypeScript 编译错误：
+
+**错误代码片段**:
+```typescript
+// ProductForm.tsx - 使用了默认导出
+export default ProductForm;
+
+// 但在其他文件中使用了命名导入
+import { ProductForm, ProductFormData, getPageTitle } from '../components/ProductForm'; // ❌ 错误
+```
+
+**TypeScript 错误**:
+```
+error TS2614: Module '"../components/ProductForm"' has no exported member 'ProductForm'.
+Did you mean to use 'import ProductForm from "../components/ProductForm"' instead?
+```
+
+**修复方案**:
+修改所有导入语句使用默认导入：
+
+```typescript
+// 正确的导入方式
+import ProductForm, { ProductFormData, getPageTitle } from '../components/ProductForm';
+```
+
+**同时修复的问题**:
+- ProductEditWizard 中使用了错误的字段名 `billingPeriod` 而非 `billing_period`
+- 更新为：`firstPrice?.billing_period || 'monthly'`
+
+**教训**:
+1. 组件导出要保持一致性：要么全部用命名导出，要么全部用默认导出
+2. 修改组件导出方式时，要检查所有导入该组件的文件
+3. 在重构关键组件后，立即运行 `npx tsc --noEmit` 检查编译错误
+4. 使用默认导出更符合 React 组件的惯例
+
+**相关文件**:
+- `/components/ProductForm.tsx`
+- `/pages/ProductCreateWizard.tsx`
+- `/pages/ProductEditWizard.tsx`
+- `/pages/PaymentLinkWizard.tsx`
+
+---
+
 ## 更新日志
+
+### 2026-01-19 (晚期)
+- 创建了统一的 ProductForm 组件，支持三种模式：create, edit, create-link
+- 实现了字段行为矩阵：不同模式下字段的可见性/可编辑性动态调整
+- 创建了 ProductEditWizard 页面用于编辑现有产品
+- 重构了 ProductCreateWizard 和 PaymentLinkWizard 使用统一的 ProductForm
+- 更新了 ProductsPage 的导航逻辑，支持编辑产品功能
+- 修复了 ProductForm 导入错误导致的编译失败问题
+- 修复了 billingPeriod 字段名不匹配的问题
 
 ### 2026-01-19
 - 修复了 ProductDetailPage 的 formatDateTime 导入缺失问题

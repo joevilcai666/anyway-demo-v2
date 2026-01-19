@@ -6,7 +6,7 @@ import {
   MoreHorizontal,
   Plus,
 } from 'lucide-react';
-import { Product, RevenueModel, PaymentLink, Price } from '../types';
+import { Product, PaymentLink, Price } from '../types';
 import { PaymentLinksList } from '../components/PaymentLinksList';
 import { formatDate, formatDateTime, formatPrice } from '../utils';
 import { mockPrices, mockPaymentLinks, getPricesByProduct, getPaymentLinksByProduct } from '../constants';
@@ -17,33 +17,6 @@ interface ProductDetailPageProps {
   onEditProduct: () => void;
   onCreatePaymentLink: () => void;
 }
-
-// Helper to get revenue model badge config
-const getRevenueModelBadge = (model: RevenueModel) => {
-  switch (model) {
-    case 'one_time':
-      return {
-        label: 'One-time',
-        bg: 'bg-amber-50',
-        text: 'text-amber-700',
-        border: 'border-amber-200',
-      };
-    case 'subscription':
-      return {
-        label: 'Subscription',
-        bg: 'bg-blue-50',
-        text: 'text-blue-700',
-        border: 'border-blue-200',
-      };
-    case 'usage_based':
-      return {
-        label: 'Usage-based',
-        bg: 'bg-emerald-50',
-        text: 'text-emerald-700',
-        border: 'border-emerald-200',
-      };
-  }
-};
 
 // Helper to get status badge config
 const getStatusBadge = (status: 'draft' | 'published' | 'archived') => {
@@ -122,7 +95,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     console.log('Delete link:', linkId);
   };
 
-  const revenueBadge = getRevenueModelBadge(product.revenueModel);
   const statusBadge = getStatusBadge(product.status);
 
   return (
@@ -179,34 +151,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     </p>
                   </div>
 
-                  {/* Badges Grid */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Revenue Model */}
-                    <div>
-                      <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
-                        Revenue model
-                      </label>
-                      <div className="mt-1">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${revenueBadge.bg} ${revenueBadge.text} ${revenueBadge.border}`}
-                        >
-                          {revenueBadge.label}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <div>
-                      <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
-                        Status
-                      </label>
-                      <div className="mt-1">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}
-                        >
-                          {statusBadge.label}
-                        </span>
-                      </div>
+                  {/* Status */}
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                      Status
+                    </label>
+                    <div className="mt-1">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}
+                      >
+                        {statusBadge.label}
+                      </span>
                     </div>
                   </div>
 
