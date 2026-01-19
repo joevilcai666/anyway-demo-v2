@@ -75,7 +75,7 @@ const isFieldReadOnly = (mode: ProductFormMode, field: keyof ProductFormData): b
     case 'description':
       return mode === 'create-link';
     case 'revenueModel':
-      return mode === 'edit' || mode === 'create-link';
+      return mode === 'edit'; // Allow changing in create-link mode
     case 'priceAmount':
       return mode === 'edit';
     case 'priceName':
@@ -176,9 +176,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle revenue model change (only for create mode)
+  // Handle revenue model change (for create and create-link modes)
   const handleRevenueModelChange = (model: RevenueModel) => {
-    if (mode === 'create') {
+    if (mode === 'create' || mode === 'create-link') {
       setFormData((prev) => ({
         ...prev,
         revenueModel: model,
@@ -355,12 +355,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   // Render revenue model selector
   const renderRevenueModelSelector = () => {
-    const disabled = mode === 'edit' || mode === 'create-link';
+    const disabled = mode === 'edit';
     const lockReason = mode === 'edit'
       ? 'Revenue model is locked to maintain consistency with existing payment links'
-      : mode === 'create-link'
-        ? `Inherited from product: ${formData.revenueModel.replace('_', ' ')}`
-        : '';
+      : '';
 
     return (
       <div>
@@ -374,6 +372,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
         </label>
         {lockReason && (
           <p className="text-sm text-neutral-500 mb-3">{lockReason}</p>
+        )}
+        {mode === 'create-link' && (
+          <p className="text-sm text-neutral-500 mb-3">
+            Choose a different revenue model for this payment link.
+          </p>
         )}
         <RevenueModelSelector
           selectedModel={formData.revenueModel}
