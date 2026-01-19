@@ -1,4 +1,4 @@
-import { ApiKey, ApiKeyStatus, ApiKeyType, Delivery, DeliveryStatus, Step, Invoice, DailyUsage } from './types';
+import { ApiKey, ApiKeyStatus, ApiKeyType, Delivery, DeliveryStatus, Step, Invoice, DailyUsage, Product, Price, PaymentLink, PricingRecommendation } from './types';
 
 export const MOCK_USER = {
   name: 'Jichun Cai',
@@ -166,4 +166,216 @@ export const TEST_LIVE_DELIVERY: Delivery = {
     { id: 'l4', depth: 0, name: 'Response', type: 'llm', status: 'success', startTime: new Date().toISOString(), endTime: new Date().toISOString(), durationMs: 1100, durationLabel: '1.1s', cost: 0.001, provider: 'openai', model: 'gpt-4o', tokensTotal: 400, tokensIn: 300, tokensOut: 100 },
   ],
   artifacts: [{ name: 'Greeting.txt', url: '#' }]
+};
+
+// --- Product Catalog Mock Data (PRD v2.0) ---
+
+// NEW: Price mock data (PRD v2.0)
+export const mockPrices: Price[] = [
+  {
+    price_id: 'price_1',
+    product_id: 'prod_1',
+    price_name: 'Basic Tier',
+    revenue_model: 'subscription',
+    currency: 'USD',
+    unit_amount: 99,
+    billing_period: 'monthly',
+    created_at: '2026-01-13T10:00:00Z',
+    updated_at: '2026-01-13T10:00:00Z',
+  },
+  {
+    price_id: 'price_2',
+    product_id: 'prod_1',
+    price_name: 'Pro Tier',
+    revenue_model: 'subscription',
+    currency: 'USD',
+    unit_amount: 199,
+    billing_period: 'monthly',
+    created_at: '2026-01-13T11:00:00Z',
+    updated_at: '2026-01-13T11:00:00Z',
+  },
+  {
+    price_id: 'price_3',
+    product_id: 'prod_2',
+    price_name: 'One-time Report',
+    revenue_model: 'one_time',
+    currency: 'USD',
+    unit_amount: 299,
+    created_at: '2026-01-10T09:00:00Z',
+    updated_at: '2026-01-10T09:00:00Z',
+  },
+  {
+    price_id: 'price_4',
+    product_id: 'prod_3',
+    price_name: 'API Call',
+    revenue_model: 'usage_based',
+    currency: 'USD',
+    unit_amount: 0.10,
+    usage_unit_name: 'API call',
+    created_at: '2026-01-12T14:00:00Z',
+    updated_at: '2026-01-12T14:00:00Z',
+  },
+];
+
+// NEW: PaymentLink mock data (PRD v2.0)
+export const mockPaymentLinks: PaymentLink[] = [
+  {
+    payment_link_id: 'link_1',
+    product_id: 'prod_1',
+    price_id: 'price_1',
+    link_name: 'Twitter Campaign',
+    url: 'https://pay.anyway.ai/p/abc123',
+    status: 'active',
+    created_at: '2026-01-13T10:00:00Z',
+    last_accessed_at: '2026-01-18T15:30:00Z',
+  },
+  {
+    payment_link_id: 'link_2',
+    product_id: 'prod_1',
+    price_id: 'price_2',
+    link_name: 'Email Promo',
+    url: 'https://pay.anyway.ai/p/def456',
+    status: 'active',
+    created_at: '2026-01-14T09:00:00Z',
+    last_accessed_at: '2026-01-17T12:00:00Z',
+  },
+  {
+    payment_link_id: 'link_3',
+    product_id: 'prod_1',
+    price_id: 'price_1',
+    link_name: 'Test Link',
+    url: 'https://pay.anyway.ai/p/ghi789',
+    status: 'disabled',
+    created_at: '2026-01-10T08:00:00Z',
+  },
+  {
+    payment_link_id: 'link_4',
+    product_id: 'prod_2',
+    price_id: 'price_3',
+    link_name: 'Direct Purchase',
+    url: 'https://pay.anyway.ai/p/jkl012',
+    status: 'active',
+    created_at: '2026-01-10T09:00:00Z',
+    last_accessed_at: '2026-01-16T10:30:00Z',
+  },
+];
+
+// NEW: PricingRecommendation mock data (PRD v2.0)
+export const mockPricingRecommendations: PricingRecommendation[] = [
+  {
+    recommendation_id: 'rec_1',
+    snapshot_id: 'snap_1',
+    product_id: 'prod_1',
+    recommended_min_price: 79,
+    recommended_typical_price: 99,
+    recommended_max_price: 149,
+    confidence_level: 'medium',
+    assumptions: [
+      { title: 'Market benchmarks', detail: 'Based on similar products in the market' },
+      { title: 'Cost coverage', detail: 'Prices cover estimated costs with healthy margins' },
+    ],
+    rationale: [
+      { title: 'Min price', detail: 'Covers your costs with 20% margin' },
+      { title: 'Typical price', detail: 'Aligns with market median for similar services' },
+      { title: 'Max price', detail: 'Premium pricing for high-value customers' },
+    ],
+    cost_source: 'manual',
+    has_cost_data: true,
+    llm_model: 'claude-3-5-sonnet',
+    prompt_version: 'v1.0',
+    schema_version: 'v1.0',
+    applied_price_type: 'typical',
+    applied_to_price_id: 'price_1',
+    created_at: '2026-01-13T10:05:00Z',
+  },
+  {
+    recommendation_id: 'rec_2',
+    snapshot_id: 'snap_2',
+    product_id: 'prod_2',
+    recommended_min_price: 199,
+    recommended_typical_price: 299,
+    recommended_max_price: 499,
+    confidence_level: 'high',
+    assumptions: [
+      { title: 'Premium positioning', detail: 'High-value, one-off deliverable' },
+      { title: 'Expert analysis', detail: 'Specialized research report format' },
+    ],
+    rationale: [
+      { title: 'Min price', detail: 'Minimum viable price for professional work' },
+      { title: 'Typical price', detail: 'Market rate for comparable reports' },
+      { title: 'Max price', detail: 'Premium tier for enterprise clients' },
+    ],
+    cost_source: 'manual',
+    has_cost_data: true,
+    llm_model: 'claude-3-5-sonnet',
+    prompt_version: 'v1.0',
+    schema_version: 'v1.0',
+    applied_price_type: 'typical',
+    applied_to_price_id: 'price_3',
+    created_at: '2026-01-10T09:05:00Z',
+  },
+];
+
+// UPDATE: Product mock data (PRD v2.0 - remove defaultPrice, rename description)
+export const mockProducts: Product[] = [
+  {
+    id: 'prod_1',
+    merchantId: 'merchant_1',
+    name: 'Weekly Business Report',
+    deliverable_description: 'A weekly report summarizing your key business metrics and insights',
+    status: 'published',
+    revenueModel: 'subscription',
+    createdAt: '2026-01-10T09:00:00Z',
+    updatedAt: '2026-01-13T10:00:00Z',
+  },
+  {
+    id: 'prod_2',
+    merchantId: 'merchant_1',
+    name: 'Market Analysis Report',
+    deliverable_description: 'Comprehensive market research and competitor analysis',
+    status: 'published',
+    revenueModel: 'one_time',
+    createdAt: '2026-01-05T14:00:00Z',
+    updatedAt: '2026-01-10T09:00:00Z',
+  },
+  {
+    id: 'prod_3',
+    merchantId: 'merchant_1',
+    name: 'AI API Access',
+    deliverable_description: 'Pay-per-call API for AI-powered predictions',
+    status: 'draft',
+    revenueModel: 'usage_based',
+    createdAt: '2026-01-12T10:00:00Z',
+    updatedAt: '2026-01-12T10:00:00Z',
+  },
+  {
+    id: 'prod_4',
+    merchantId: 'merchant_1',
+    name: 'Monthly Analytics Dashboard',
+    deliverable_description: 'Real-time analytics and insights dashboard',
+    status: 'draft',
+    revenueModel: 'subscription',
+    createdAt: '2026-01-15T11:00:00Z',
+    updatedAt: '2026-01-15T11:00:00Z',
+  },
+];
+
+// Helper to get payment links count for a product
+export const getPaymentLinksCount = (productId: string): number => {
+  return mockPaymentLinks.filter(link => link.product_id === productId).length;
+};
+
+// Helper to get prices for a product
+export const getPricesByProduct = (productId: string): Price[] => {
+  return mockPrices.filter(price => price.product_id === productId);
+};
+
+// Helper to get payment links for a product
+export const getPaymentLinksByProduct = (productId: string): PaymentLink[] => {
+  return mockPaymentLinks.filter(link => link.product_id === productId);
+};
+
+// Helper to get pricing recommendation for a product
+export const getPricingRecommendationByProduct = (productId: string): PricingRecommendation | undefined => {
+  return mockPricingRecommendations.find(rec => rec.product_id === productId);
 };

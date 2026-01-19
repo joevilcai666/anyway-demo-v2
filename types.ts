@@ -115,47 +115,118 @@ export type ProductStatus = 'draft' | 'published' | 'archived';
 
 export type RevenueModel = 'one_time' | 'subscription' | 'usage_based';
 
+// UPDATE: Product interface (PRD v2.0 - remove defaultPrice)
 export interface Product {
   id: string;
   merchantId: string;
   name: string;
-  description?: string;
+  deliverable_description?: string;  // Renamed from 'description'
   status: ProductStatus;
   revenueModel: RevenueModel;
-  defaultPrice?: Price;
+  // REMOVED: defaultPrice?: Price;  // No longer needed in v2.0
   createdAt: string;
   updatedAt: string;
-  last7dPayments?: number;
+  // REMOVED: last7dPayments?: number;  // Moving to Links list
 }
 
+// NEW: Price model (PRD v2.0 - separate from Product)
 export interface Price {
-  id: string;
-  productId: string;
-  revenueModel: RevenueModel;
-  currency: string;
-  isDefault: boolean;
-  // One-time
-  amount?: number;
-  // Subscription
-  billingPeriod?: 'monthly' | 'yearly';
-  trialPeriodDays?: number;
-  // Usage-based
-  unitAmount?: number;
-  usageUnitName?: string;
-  usageUnitDescription?: string;
-  minimumCharge?: number;
+  price_id: string;
+  product_id: string;
+  price_name: string;  // Required: "Basic Tier", "Pro Tier", "Enterprise Plan"
+  revenue_model: RevenueModel;
+  currency: string;  // Fixed: "USD"
+  created_at: string;
+  updated_at: string;
+
+  // One-time fields
+  unit_amount?: number;  // e.g., 99.99
+
+  // Subscription fields
+  billing_period?: 'monthly' | 'yearly';
+  trial_period_days?: number;  // Optional, not in MVP
+
+  // Usage-based fields
+  usage_unit_name?: string;  // e.g., "API call", "1K tokens", "run"
+  usage_unit_description?: string;  // Optional
+  minimum_charge?: number;  // Optional, not in MVP
 }
 
+// UPDATE: PaymentLink model (PRD v2.0 - add link_name and last_accessed_at)
 export interface PaymentLink {
-  id: string;
-  productId: string;
-  priceId: string;
-  url: string;
+  payment_link_id: string;
+  product_id: string;
+  price_id: string;  // FK to Price (1:1 relationship)
+  link_name: string;  // User-editable: "Basic Tier", "Twitter Campaign"
+  url: string;  // Full URL from Stripe/Payment module
   status: 'active' | 'disabled';
-  createdAt: string;
-  clicks: number;
-  leads: number; // Checkout started
-  sales: number; // Paid
+  created_at: string;
+  last_accessed_at?: string;  // Optional, for analytics
+  // REMOVED: clicks, leads, sales (analytics, not in MVP)
+}
+
+// NEW: PricingRecommendation model (PRD v2.0)
+export interface PricingRecommendation {
+  recommendation_id: string;
+  snapshot_id: string;  // FK to PricingInputSnapshot (optional for MVP)
+  product_id?: string;  // Optional, can be for Price too
+  recommended_min_price: number;
+  recommended_typical_price: number;
+  recommended_max_price: number;
+  confidence_level: 'low' | 'medium' | 'high';
+  assumptions: Array<{title: string; detail: string}>;
+  rationale: Array<{title: string; detail: string}>;
+  cost_source: 'trace' | 'manual' | 'none';
+  has_cost_data: boolean;
+  llm_model: string;  // e.g., "claude-3-5-sonnet"
+  prompt_version: string;
+  schema_version: string;
+  applied_price_type?: 'min' | 'typical' | 'max' | null;
+  applied_to_price_id?: string;  // Optional, track which Price
+  created_at: string;
+}
+
+// NEW: PricingInputSnapshot (PRD v2.0 - optional for MVP)
+export interface PricingInputSnapshot {
+  snapshot_id: string;
+  product_id?: string;
+  revenue_model: RevenueModel;
+  target_customer_type: 'individual_or_small_team' | 'small_business' | 'growth_enterprise';
+  use_case_category: string;
+  use_trace_cost_reference: boolean;
+  avg_trace_cost?: number;
+  manual_cost?: number;
+  value_types?: Array<'save_time' | 'increase_revenue' | 'reduce_cost' | 'other'>;
+  raw_inputs: Record<string, any>;  // Flexible JSON storage
+  created_by?: string;  // user_id
+  created_at: string;
+}
+
+// NEW: Pricing Assistant State Types (PRD v2.0)
+export type PricingAssistantState =
+  | 'empty'      // State 1
+  | 'form'       // State 2
+  | 'advanced'   // State 3
+  | 'loading'    // State 4
+  | 'success'    // State 5
+  | 'error'      // State 6
+  | 'no_cost'    // State 7
+  | 'out_of_date'; // State 8
+
+export interface PricingAssistantFormData {
+  target_customer_type?: 'individual_or_small_team' | 'small_business' | 'growth_enterprise';
+  use_case_category?: string;
+  use_trace_cost_reference?: boolean;
+  manual_cost?: number;
+  value_types?: Array<'save_time' | 'increase_revenue' | 'reduce_cost' | 'other'>;
+}
+
+export interface PricingAssistantStateData {
+  currentState: PricingAssistantState;
+  formData: PricingAssistantFormData;
+  recommendation?: PricingRecommendation;
+  error?: { message: string; details?: string };
+  traceCostData?: { has_data: boolean; avg_cost: number; count: number; period_days: number };
 }
 
 // --- Order & Payments Module Types ---

@@ -178,19 +178,24 @@ const DashboardPage: React.FC = () => {
             
             <div className="flex items-center gap-3">
               {/* Date Picker Mock */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-600 shadow-sm cursor-pointer hover:border-neutral-300 transition-colors">
-                <Clock size={16} />
+              <button
+                type="button"
+                aria-label="Select date range: Last 24 hours, Oct 26, 10:00 - Oct 27, 10:00"
+                className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-600 shadow-sm hover:border-neutral-300 transition-colors"
+              >
+                <Clock size={16} aria-hidden="true" />
                 <span className="font-medium">Last 24 hours</span>
-                <span className="text-neutral-300">|</span>
+                <span className="text-neutral-300" aria-hidden="true">|</span>
                 <span className="text-neutral-400 text-xs">Oct 26, 10:00 - Oct 27, 10:00</span>
-              </div>
-              
+              </button>
+
               {/* Status Filter */}
-              <div className="flex items-center bg-white border border-neutral-200 rounded-lg p-1 shadow-sm">
+              <div role="group" aria-label="Filter by status" className="flex items-center bg-white border border-neutral-200 rounded-lg p-1 shadow-sm">
                 {(['all', 'success', 'failed'] as const).map(s => (
                   <button
                     key={s}
                     onClick={() => setStatusFilter(s)}
+                    aria-pressed={statusFilter === s}
                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize
                       ${statusFilter === s ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'}`}
                   >
@@ -217,45 +222,57 @@ const DashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {filteredDeliveries.map((delivery) => (
-                  <tr 
-                    key={delivery.id} 
-                    onClick={() => setSelectedDelivery(delivery)}
-                    className="hover:bg-neutral-50 cursor-pointer transition-colors group"
-                  >
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-xs text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">
-                        {delivery.id.split('_')[1] || delivery.id}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-neutral-900 tabular-nums">
-                      {formatDateTime(delivery.timestamp)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-neutral-900">{delivery.agentName}</span>
-                        <span className="text-xs text-neutral-500">{delivery.userEmail}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={delivery.status} />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-neutral-600 pl-8">
-                      {delivery.stepCount}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-neutral-600 tabular-nums font-mono">
-                      {delivery.totalTokens.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-neutral-900 tabular-nums font-mono">
-                      ${delivery.totalCost.toFixed(4)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                       <Button size="sm" variant="secondary" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                         Trace
-                       </Button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredDeliveries.map((delivery) => {
+                  const shortId = delivery.id.split('_')[1] || delivery.id;
+                  return (
+                    <tr
+                      key={delivery.id}
+                      onClick={() => setSelectedDelivery(delivery)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedDelivery(delivery);
+                        }
+                      }}
+                      tabIndex={0}
+                      className="hover:bg-neutral-50 cursor-pointer transition-colors group"
+                      role="button"
+                      aria-label={`View delivery ${shortId} details`}
+                    >
+                      <td className="px-6 py-4">
+                        <span className="font-mono text-xs text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200" aria-label={`Delivery ID: ${delivery.id}`}>
+                          {shortId}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-neutral-900 tabular-nums">
+                        {formatDateTime(delivery.timestamp)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-neutral-900">{delivery.agentName}</span>
+                          <span className="text-xs text-neutral-500">{delivery.userEmail}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={delivery.status} />
+                      </td>
+                      <td className="px-6 py-4 text-sm text-neutral-600 pl-8">
+                        {delivery.stepCount}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-neutral-600 tabular-nums font-mono">
+                        {delivery.totalTokens.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-neutral-900 tabular-nums font-mono">
+                        ${delivery.totalCost.toFixed(4)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Button size="sm" variant="secondary" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          Trace
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             
@@ -356,15 +373,27 @@ const DashboardPage: React.FC = () => {
                    <h3 className="text-sm font-bold text-neutral-900 mb-4 px-1">Artifacts</h3>
                    <div className="grid grid-cols-1 gap-3">
                       {selectedDelivery.artifacts.map((art, i) => (
-                        <div key={i} className="flex items-center p-3 bg-white border border-neutral-200 rounded-lg hover:border-neutral-300 transition-colors group cursor-pointer">
-                           <div className="w-10 h-10 bg-neutral-100 rounded flex items-center justify-center mr-3 text-neutral-500 group-hover:text-neutral-900">
+                        <div
+                          key={i}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              // Handle artifact click
+                            }
+                          }}
+                          className="flex items-center p-3 bg-white border border-neutral-200 rounded-lg hover:border-neutral-300 transition-colors group cursor-pointer"
+                          aria-label={`View artifact: ${art.name}`}
+                        >
+                           <div className="w-10 h-10 bg-neutral-100 rounded flex items-center justify-center mr-3 text-neutral-500 group-hover:text-neutral-900" aria-hidden="true">
                              <FileText size={20} />
                            </div>
                            <div className="flex-1">
                              <div className="text-sm font-semibold text-neutral-900">{art.name}</div>
                              <div className="text-xs text-neutral-500">Document</div>
                            </div>
-                           <ExternalLink size={16} className="text-neutral-300 group-hover:text-neutral-500" />
+                           <ExternalLink size={16} className="text-neutral-300 group-hover:text-neutral-500" aria-hidden="true" />
                         </div>
                       ))}
                    </div>
@@ -431,8 +460,15 @@ const DashboardPage: React.FC = () => {
                    ) : (
                      <div className="space-y-4 max-w-lg mx-auto w-full">
                        <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-1 flex items-center">
-                         <code className="flex-1 font-mono text-sm text-neutral-800 break-all px-3 py-2">{generatedKey}</code>
-                         <button className="p-2 hover:bg-white rounded text-neutral-500 hover:text-neutral-900 transition-colors shadow-sm">
+                         <code className="flex-1 font-mono text-sm text-neutral-800 break-all px-3 py-2" aria-label={`API Key: ${generatedKey}`}>{generatedKey}</code>
+                         <button
+                           aria-label="Copy API key to clipboard"
+                           className="p-2 hover:bg-white rounded text-neutral-500 hover:text-neutral-900 transition-colors shadow-sm"
+                           onClick={() => {
+                             navigator.clipboard.writeText(generatedKey);
+                             // Could add toast notification here
+                           }}
+                         >
                             <Copy size={18} />
                          </button>
                        </div>
@@ -454,9 +490,17 @@ const DashboardPage: React.FC = () => {
                    
                    <div className="max-w-lg mx-auto w-full space-y-4">
                       <div className="bg-neutral-900 rounded-xl p-4 shadow-lg text-neutral-100 font-mono text-sm flex items-center justify-between group">
-                        <span className="text-green-400 mr-2">$</span>
+                        <span className="text-green-400 mr-2" aria-hidden="true">$</span>
                         <span className="flex-1">pip install anyway-sdk</span>
-                        <button className="text-neutral-500 group-hover:text-white transition-colors"><Copy size={16} /></button>
+                        <button
+                          aria-label="Copy install command"
+                          className="text-neutral-500 group-hover:text-white transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText('pip install anyway-sdk');
+                          }}
+                        >
+                          <Copy size={16} />
+                        </button>
                       </div>
                       
                       <div className="flex justify-between items-center text-sm px-1">
@@ -657,7 +701,7 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
         >
            
            {/* Tree Toggle & Icon Area */}
-           <div 
+           <div
              className="flex items-center justify-center mr-3 relative z-10 w-12 h-6 cursor-pointer"
              onClick={(e) => {
                // Interaction: Clicking the icon/chevron toggles the Tree View (Expand/Collapse Children).
@@ -666,10 +710,20 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                  onToggleTreeExpand();
                }
              }}
+             role="button"
+             tabIndex={0}
+             aria-expanded={isTreeExpanded}
+             onKeyDown={(e) => {
+               if ((e.key === 'Enter' || e.key === ' ') && hasChildren) {
+                 e.preventDefault();
+                 e.stopPropagation();
+                 onToggleTreeExpand();
+               }
+             }}
            >
               {/* Expand Button */}
               {hasChildren && (
-                <div className="absolute -left-3 p-1 text-neutral-400 transition-colors hover:text-neutral-600">
+                <div className="absolute -left-3 p-1 text-neutral-400 transition-colors hover:text-neutral-600" aria-hidden="true">
                   {isTreeExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </div>
               )}

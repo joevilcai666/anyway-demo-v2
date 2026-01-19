@@ -80,8 +80,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         {/* Collapse Toggle */}
-        <button 
+        <button
           onClick={toggleCollapse}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           className={`
             absolute top-5 p-1 rounded-md text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors
             ${isCollapsed ? 'left-1/2 -translate-x-1/2 top-16 mt-2' : 'right-4'}
@@ -117,10 +118,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Secondary Navigation */}
       <div className="px-2 py-4 border-t border-transparent flex-shrink-0">
-        <a 
-          href="#" 
-          target="_blank" 
+        <a
+          href="#"
+          target="_blank"
           rel="noopener noreferrer"
+          aria-label="View Documentation"
           className={`
             w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 transition-colors
             ${isCollapsed ? 'justify-center' : ''}
@@ -137,6 +139,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           ref={accountButtonRef}
           type="button"
           onClick={() => setIsAccountPanelOpen(!isAccountPanelOpen)}
+          aria-expanded={isAccountPanelOpen}
+          aria-haspopup="true"
+          aria-label="Account options"
           className={`
             w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all duration-200 group relative
             ${isCollapsed ? 'justify-center' : ''}
@@ -153,7 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
           {!isCollapsed && (
-             <MoreVertical size={16} className="text-neutral-400 group-hover:text-neutral-600" />
+             <MoreVertical size={16} className="text-neutral-400 group-hover:text-neutral-600" aria-hidden="true" />
           )}
         </button>
 

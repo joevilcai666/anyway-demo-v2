@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -6,25 +6,27 @@ import {
   Loader2,
   Copy,
   ExternalLink,
-  Sparkles,
+  Link as LinkIcon,
+  Tag,
 } from 'lucide-react';
-import { Product, RevenueModel, PricingAssistantState, PricingAssistantFormData, PricingRecommendation } from '../types';
+import { RevenueModel, PricingAssistantState, PricingAssistantFormData, PricingRecommendation } from '../types';
 import { RevenueModelSelector } from '../components/RevenueModelSelector';
 import { PricingAssistant } from '../components/PricingAssistant';
-import { ProductSummaryCard } from '../components/ProductSummaryCard';
 import { DraftSaveIndicator, useDraftAutoSave } from '../components/DraftSaveIndicator';
 import { formatPrice, generatePricingRecommendation, copyToClipboard, validateProductName, validatePriceAmount, validateUnitName } from '../utils';
 
-interface WizardProps {
+interface PaymentLinkWizardProps {
+  productId: string;
+  productName?: string;
   onBack: () => void;
-  onComplete: () => void;
+  onComplete: (linkId: string) => void;
 }
 
-type Step = 'basic_info_pricing' | 'generate_link';
+type Step = 'price_config' | 'generate_link';
 
 const StepIndicator: React.FC<{ currentStep: Step }> = ({ currentStep }) => {
   const steps: { id: Step; label: string }[] = [
-    { id: 'basic_info_pricing', label: 'Product & Pricing' },
+    { id: 'price_config', label: 'Price Configuration' },
     { id: 'generate_link', label: 'Payment Link' },
   ];
 
@@ -74,13 +76,13 @@ const StepIndicator: React.FC<{ currentStep: Step }> = ({ currentStep }) => {
   );
 };
 
-const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
-  const [currentStep, setCurrentStep] = useState<Step>('basic_info_pricing');
+const PaymentLinkWizard: React.FC<PaymentLinkWizardProps> = ({ productId, productName, onBack, onComplete }) => {
+  const [currentStep, setCurrentStep] = useState<Step>('price_config');
 
   // Form State
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
+    priceName: '',
+    linkName: '',
     revenueModel: 'one_time' as RevenueModel,
     priceAmount: '',
     billingPeriod: 'monthly' as 'monthly' | 'yearly',
@@ -98,7 +100,7 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
 
   // Payment Link State
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
 
   // Auto-save draft
@@ -106,7 +108,7 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
     formData,
     async (data) => {
       // Mock API call to save draft
-      console.log('Saving draft:', data);
+      console.log('Saving payment link draft:', data);
       await new Promise((resolve) => setTimeout(resolve, 500));
       return true;
     },
@@ -117,13 +119,19 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Validate product name
-    const nameValidation = validateProductName(formData.name);
-    if (!nameValidation.isValid) {
-      newErrors.name = nameValidation.error!;
+    // Validate price name
+    const priceNameValidation = validateProductName(formData.priceName);
+    if (!priceNameValidation.isValid) {
+      newErrors.priceName = priceNameValidation.error!;
     }
 
-    // Validate price based on revenue model
+    // Validate link name
+    const linkNameValidation = validateProductName(formData.linkName);
+    if (!linkNameValidation.isValid) {
+      newErrors.linkName = linkNameValidation.error!;
+    }
+
+    // Validate price amount
     if (formData.priceAmount) {
       const priceValidation = validatePriceAmount(parseFloat(formData.priceAmount));
       if (!priceValidation.isValid) {
@@ -233,18 +241,18 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
   };
 
   const handleBack = () => {
-    if (currentStep === 'basic_info_pricing') {
+    if (currentStep === 'price_config') {
       onBack();
     } else {
-      setCurrentStep('basic_info_pricing');
+      setCurrentStep('price_config');
     }
   };
 
   const generatePaymentLink = () => {
-    setIsPublishing(true);
+    setIsGenerating(true);
     setTimeout(() => {
       setGeneratedLink(`https://pay.anyway.ai/p/${Math.random().toString(36).substr(2, 9)}`);
-      setIsPublishing(false);
+      setIsGenerating(false);
     }, 1500);
   };
 
@@ -265,43 +273,57 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
       {/* Left Column: Main Form (65%) */}
       <div className="lg:col-span-2 space-y-8">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Product & Pricing</h2>
-          <p className="text-neutral-500">Define your product and set your price.</p>
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Price Configuration</h2>
+          <p className="text-neutral-500">
+            {productName ? `Creating payment link for "${productName}"` : 'Configure your price and link'}
+          </p>
         </div>
 
         <div className="space-y-8">
-          {/* Product Name */}
+          {/* Price Name */}
           <div>
             <label className="block text-sm font-semibold text-neutral-700 mb-1.5">
-              Product name <span className="text-red-500">*</span>
+              <div className="flex items-center gap-2">
+                <Tag size={16} className="text-neutral-500" />
+                Price name <span className="text-red-500">*</span>
+              </div>
             </label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Weekly Business Report"
+              value={formData.priceName}
+              onChange={(e) => setFormData({ ...formData, priceName: e.target.value })}
+              placeholder="e.g. Basic Tier, Pro Tier, Enterprise Plan"
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all ${
-                errors.name ? 'border-red-300 bg-red-50' : 'border-neutral-300 bg-white'
+                errors.priceName ? 'border-red-300 bg-red-50' : 'border-neutral-300 bg-white'
               }`}
               autoFocus
             />
-            {errors.name && <p className="mt-1.5 text-sm text-red-600">{errors.name}</p>}
+            {errors.priceName && <p className="mt-1.5 text-sm text-red-600">{errors.priceName}</p>}
+            <p className="mt-1.5 text-sm text-neutral-500">
+              A name to identify this price (e.g., "Basic Tier").
+            </p>
           </div>
 
-          {/* Deliverable Description */}
+          {/* Link Name */}
           <div>
             <label className="block text-sm font-semibold text-neutral-700 mb-1.5">
-              What does your product deliver? <span className="text-neutral-400 font-normal">(Optional)</span>
+              <div className="flex items-center gap-2">
+                <LinkIcon size={16} className="text-neutral-500" />
+                Link name <span className="text-red-500">*</span>
+              </div>
             </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="e.g. A weekly report summarizing your key business metrics and insights"
-              rows={4}
-              className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all resize-none bg-white"
+            <input
+              type="text"
+              value={formData.linkName}
+              onChange={(e) => setFormData({ ...formData, linkName: e.target.value })}
+              placeholder="e.g. Twitter Campaign, Email Promo, Direct Purchase"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all ${
+                errors.linkName ? 'border-red-300 bg-red-50' : 'border-neutral-300 bg-white'
+              }`}
             />
+            {errors.linkName && <p className="mt-1.5 text-sm text-red-600">{errors.linkName}</p>}
             <p className="mt-1.5 text-sm text-neutral-500">
-              Help your customers understand what they'll receive.
+              A name to identify this payment link (e.g., "Twitter Campaign").
             </p>
           </div>
 
@@ -437,44 +459,87 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
   const renderStep2 = () => (
     <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gradient-to-br from-amber-50 to-orange-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Sparkles size={32} strokeWidth={2} />
+        <div className="w-16 h-16 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <LinkIcon size={32} strokeWidth={2} />
         </div>
         <h2 className="text-3xl font-bold text-neutral-900 mb-2">Almost there!</h2>
-        <p className="text-neutral-500">Review your product and generate your payment link.</p>
+        <p className="text-neutral-500">Review and generate your payment link.</p>
       </div>
 
       {/* Summary Card */}
-      <ProductSummaryCard
-        name={formData.name || 'Untitled Product'}
-        revenueModel={formData.revenueModel}
-        priceAmount={parseFloat(formData.priceAmount) || 0}
-        billingPeriod={formData.billingPeriod}
-        usageUnitName={formData.usageUnitName}
-        status="draft"
-        onEdit={() => setCurrentStep('basic_info_pricing')}
-      />
+      <div className="bg-white border border-neutral-200 rounded-xl shadow-sm p-6 space-y-4 mb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-neutral-900 mb-4">Summary</h3>
+
+            <div className="space-y-3">
+              {/* Price Name */}
+              <div>
+                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                  Price name
+                </label>
+                <p className="text-base font-semibold text-neutral-900">{formData.priceName || 'Untitled Price'}</p>
+              </div>
+
+              {/* Link Name */}
+              <div>
+                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                  Link name
+                </label>
+                <p className="text-base font-semibold text-neutral-900">{formData.linkName || 'Untitled Link'}</p>
+              </div>
+
+              {/* Revenue Model Badge */}
+              <div>
+                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                  Revenue model
+                </label>
+                <p className="text-base font-medium text-neutral-700 capitalize mt-1">
+                  {formData.revenueModel.replace('_', ' ')}
+                </p>
+              </div>
+
+              {/* Price */}
+              <div>
+                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                  Price
+                </label>
+                <p className="text-2xl font-mono font-bold text-neutral-900">
+                  ${formData.priceAmount || '0.00'}
+                  {formData.revenueModel === 'subscription' && (
+                    <span className="text-base font-sans font-normal text-neutral-600">
+                      /{formData.billingPeriod}
+                    </span>
+                  )}
+                  {formData.revenueModel === 'usage_based' && formData.usageUnitName && (
+                    <span className="text-base font-sans font-normal text-neutral-600">
+                      /{formData.usageUnitName}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Generate Link Section */}
-      <div className="mt-6 bg-white p-6 border border-neutral-200 rounded-xl shadow-sm space-y-6">
+      <div className="bg-white p-6 border border-neutral-200 rounded-xl shadow-sm space-y-6">
         {!generatedLink ? (
           <div className="space-y-4">
-            <p className="text-sm text-neutral-600">
-              Your product will be <strong>published automatically</strong> when you generate the payment link.
-            </p>
             <button
               onClick={generatePaymentLink}
-              disabled={isPublishing}
+              disabled={isGenerating}
               className="w-full py-4 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-70 flex items-center justify-center gap-2 text-base"
             >
-              {isPublishing ? (
+              {isGenerating ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
                   Generating link…
                 </>
               ) : (
                 <>
-                  <Sparkles size={20} />
+                  <LinkIcon size={20} />
                   Generate payment link
                 </>
               )}
@@ -486,8 +551,8 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
             <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-sm flex items-center gap-3">
               <Check size={20} className="shrink-0" />
               <div>
-                <p className="font-semibold">Your product is live!</p>
-                <p className="text-emerald-700 mt-0.5">Start sharing your payment link to receive payments.</p>
+                <p className="font-semibold">Payment link created!</p>
+                <p className="text-emerald-700 mt-0.5">Your link is ready to share.</p>
               </div>
             </div>
 
@@ -517,20 +582,14 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
               </div>
             </div>
 
-            {/* What's Next (collapsible) */}
-            <div className="pt-4 border-t border-neutral-100">
-              <details className="group">
-                <summary className="flex items-center justify-between cursor-pointer text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors list-none">
-                  <span>What's next?</span>
-                  <ChevronRight size={16} className="transition-transform group-open:rotate-90" />
-                </summary>
-                <div className="mt-3 space-y-2 text-sm text-neutral-600 text-left pl-4">
-                  <p>• Share your link on social media or with customers</p>
-                  <p>• Create additional payment links for campaigns</p>
-                  <p>• Track your orders and revenue in the Orders section</p>
-                </div>
-              </details>
-            </div>
+            {/* Product Context */}
+            {productName && (
+              <div className="pt-4 border-t border-neutral-100">
+                <p className="text-sm text-neutral-600">
+                  This link is for <strong className="text-neutral-900">{productName}</strong>
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -549,7 +608,7 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
             >
               <ArrowLeft size={20} />
             </button>
-            <h1 className="text-lg font-bold text-neutral-900">Add a Product</h1>
+            <h1 className="text-lg font-bold text-neutral-900">Create Payment Link</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -561,7 +620,7 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
             {currentStep !== 'generate_link' && (
               <button
                 onClick={handleNext}
-                disabled={!formData.name || !formData.priceAmount}
+                disabled={!formData.priceName || !formData.linkName || !formData.priceAmount}
                 className="px-6 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
               >
                 Next Step
@@ -570,7 +629,7 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
             )}
             {currentStep === 'generate_link' && generatedLink && (
               <button
-                onClick={onComplete}
+                onClick={() => onComplete('link_123')}
                 className="px-6 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-all"
               >
                 Done
@@ -584,10 +643,10 @@ const ProductCreateWizard: React.FC<WizardProps> = ({ onBack, onComplete }) => {
       <main className="flex-1 overflow-y-auto py-8 px-6">
         <StepIndicator currentStep={currentStep} />
 
-        <div className="pb-20">{currentStep === 'basic_info_pricing' ? renderStep1() : renderStep2()}</div>
+        <div className="pb-20">{currentStep === 'price_config' ? renderStep1() : renderStep2()}</div>
       </main>
     </div>
   );
 };
 
-export default ProductCreateWizard;
+export default PaymentLinkWizard;

@@ -1,257 +1,309 @@
-import React from 'react';
-import { 
-  ArrowLeft, 
-  ExternalLink, 
-  MoreHorizontal, 
-  Copy, 
-  TrendingUp, 
-  Users, 
-  DollarSign, 
-  Activity,
-  Sparkles
+import React, { useState } from 'react';
+import {
+  ArrowLeft,
+  Edit,
+  ExternalLink,
+  MoreHorizontal,
+  Plus,
 } from 'lucide-react';
-import { Product } from '../types';
+import { Product, RevenueModel, PaymentLink, Price } from '../types';
+import { PaymentLinksList } from '../components/PaymentLinksList';
+import { formatDate, formatDateTime, formatPrice } from '../utils';
+import { mockPrices, mockPaymentLinks, getPricesByProduct, getPaymentLinksByProduct } from '../constants';
 
-interface ProductDetailProps {
-  product: Product; // In real app, might just pass ID
+interface ProductDetailPageProps {
+  productId: string;
   onBack: () => void;
+  onEditProduct: () => void;
+  onCreatePaymentLink: () => void;
 }
 
-const ProductDetailPage: React.FC<ProductDetailProps> = ({ product, onBack }) => {
-  
-  // Mock Performance Data
-  const performance = {
-    clicks: 1250,
-    checkoutStarted: 340,
-    paid: 85,
-    conversionRate: '6.8%'
+// Helper to get revenue model badge config
+const getRevenueModelBadge = (model: RevenueModel) => {
+  switch (model) {
+    case 'one_time':
+      return {
+        label: 'One-time',
+        bg: 'bg-amber-50',
+        text: 'text-amber-700',
+        border: 'border-amber-200',
+      };
+    case 'subscription':
+      return {
+        label: 'Subscription',
+        bg: 'bg-blue-50',
+        text: 'text-blue-700',
+        border: 'border-blue-200',
+      };
+    case 'usage_based':
+      return {
+        label: 'Usage-based',
+        bg: 'bg-emerald-50',
+        text: 'text-emerald-700',
+        border: 'border-emerald-200',
+      };
+  }
+};
+
+// Helper to get status badge config
+const getStatusBadge = (status: 'draft' | 'published' | 'archived') => {
+  switch (status) {
+    case 'draft':
+      return {
+        label: 'Draft',
+        bg: 'bg-neutral-100',
+        text: 'text-neutral-600',
+        border: 'border-neutral-300',
+      };
+    case 'published':
+      return {
+        label: 'Published',
+        bg: 'bg-emerald-50',
+        text: 'text-emerald-700',
+        border: 'border-emerald-200',
+      };
+    case 'archived':
+      return {
+        label: 'Archived',
+        bg: 'bg-neutral-50',
+        text: 'text-neutral-500',
+        border: 'border-neutral-200',
+      };
+  }
+};
+
+// Mock product data (in real app, fetch by productId)
+const mockProduct: Product = {
+  id: 'prod_1',
+  merchantId: 'merchant_1',
+  name: 'Weekly Business Report',
+  deliverable_description: 'A comprehensive weekly report summarizing your key business metrics, trends, and actionable insights.',
+  status: 'published',
+  revenueModel: 'subscription',
+  createdAt: '2026-01-10T09:00:00Z',
+  updatedAt: '2026-01-13T10:00:00Z',
+};
+
+const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
+  productId,
+  onBack,
+  onEditProduct,
+  onCreatePaymentLink,
+}) => {
+  // Mock data fetching (in real app, use API)
+  const product = mockProduct;
+  const prices = getPricesByProduct(productId);
+  const paymentLinks = getPaymentLinksByProduct(productId);
+
+  // Get current price (first price for mock)
+  const currentPrice = prices[0];
+
+  // State for modals
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [editingLinkName, setEditingLinkName] = useState('');
+
+  // Handlers for PaymentLinksList
+  const handleCopyUrl = (url: string) => {
+    console.log('Copied URL:', url);
   };
 
-  // Mock Links
-  const links = [
-    { id: 'pl_01', url: 'https://buy.anyway.ai/p/code-review-basic', status: 'active', clicks: 850, sales: 50 },
-    { id: 'pl_02', url: 'https://buy.anyway.ai/p/code-review-pro', status: 'active', clicks: 400, sales: 35 },
-  ];
+  const handleToggleStatus = (linkId: string) => {
+    console.log('Toggle status for link:', linkId);
+  };
 
-  // Dynamic Pricing Logic for Mock
-  const currentPrice = product.defaultPrice?.unitAmount || product.defaultPrice?.amount || 0;
-  // Mock typical price to be slightly different to show deviation
-  // If current is 0.05, typical might be 0.04
-  const typicalPrice = currentPrice > 0 ? currentPrice * 0.85 : 0; 
-  const deviation = typicalPrice > 0 ? ((currentPrice - typicalPrice) / typicalPrice) * 100 : 0;
-  const isHighConfidence = true;
+  const handleEditName = (linkId: string, currentName: string) => {
+    setEditingLinkId(linkId);
+    setEditingLinkName(currentName);
+    setShowEditNameModal(true);
+  };
+
+  const handleDelete = (linkId: string) => {
+    console.log('Delete link:', linkId);
+  };
+
+  const revenueBadge = getRevenueModelBadge(product.revenueModel);
+  const statusBadge = getStatusBadge(product.status);
 
   return (
-    <div className="flex flex-col h-full bg-[#FAFAFA] overflow-y-auto">
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-neutral-200 bg-white flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-neutral-100 rounded-full text-neutral-500 transition-colors">
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold text-neutral-900">{product.name}</h1>
-              <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full uppercase tracking-wide border
-                ${product.status === 'published' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-neutral-100 text-neutral-600 border-neutral-200'}
-              `}>
-                {product.status}
-              </span>
+      <header className="bg-white border-b border-neutral-200 px-6 py-4 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-500"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-lg font-bold text-neutral-900">{product.name}</h1>
+                <span
+                  className={`px-2.5 py-0.5 text-xs font-medium rounded-full uppercase tracking-wide border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}
+                >
+                  {statusBadge.label}
+                </span>
+              </div>
+              <p className="text-xs text-neutral-400 mt-0.5 font-mono">ID: {product.id}</p>
             </div>
-            <p className="text-xs text-neutral-500 mt-1 font-mono text-opacity-80">ID: {product.id}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 rounded-lg transition-colors">
+              <MoreHorizontal size={20} />
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 rounded-md transition-colors">
-            <MoreHorizontal size={20} />
-          </button>
-          <button className="bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
-            <ExternalLink size={16} />
-            Create payment link
-          </button>
-        </div>
-      </div>
+      </header>
 
-      {/* Main Layout */}
-      <div className="p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left Column (Wide) */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Overview */}
-          <section className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm">
-            <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wide mb-4">Overview</h2>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Description</div>
-                <div className="text-sm text-neutral-900">{product.description || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Revenue Model</div>
-                <div className="text-sm text-neutral-900 font-medium capitalize">{product.revenueModel.replace('_', ' ')}</div>
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Created</div>
-                <div className="text-sm text-neutral-900 font-mono">
-                  {new Date(product.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          </section>
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto py-8 px-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Overview Section */}
+          <section
+            className="bg-white border border-neutral-200 rounded-xl shadow-sm p-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
+          >
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-neutral-900 mb-4">{product.name}</h2>
 
-          {/* Performance Funnel */}
-          <section className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">Performance (Last 30d)</h2>
-              <select className="text-xs border border-neutral-200 rounded px-2 py-1 bg-neutral-50">
-                <option>Last 30 days</option>
-                <option>Last 7 days</option>
-              </select>
-            </div>
-            
-            <div className="flex items-center justify-between relative px-4">
-              {/* Connector Line */}
-              <div className="absolute top-1/2 left-0 w-full h-0.5 bg-neutral-100 -z-10" />
+                <div className="space-y-4">
+                  {/* Description */}
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                      Description
+                    </label>
+                    <p className="text-sm text-neutral-700 mt-1 leading-relaxed">
+                      {product.deliverable_description || <span className="text-neutral-400 italic">No description provided</span>}
+                    </p>
+                  </div>
 
-              <div className="text-center bg-white px-4">
-                <div className="text-2xl font-bold text-neutral-900 font-mono mb-1">{performance.clicks}</div>
-                <div className="text-xs text-neutral-500 font-medium flex items-center justify-center gap-1">
-                  <Activity size={12} /> Clicks
-                </div>
-              </div>
-
-              <div className="text-center bg-white px-4">
-                <div className="text-2xl font-bold text-neutral-900 font-mono mb-1">{performance.checkoutStarted}</div>
-                <div className="text-xs text-neutral-500 font-medium flex items-center justify-center gap-1">
-                  <Users size={12} /> Checkout
-                </div>
-              </div>
-
-              <div className="text-center bg-white px-4">
-                <div className="text-2xl font-bold text-neutral-900 font-mono mb-1">{performance.paid}</div>
-                <div className="text-xs text-neutral-500 font-medium flex items-center justify-center gap-1">
-                  <DollarSign size={12} /> Paid
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Payment Links */}
-          <section className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-             <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">Active Links</h2>
-             </div>
-             <table className="w-full text-left">
-                <thead className="bg-neutral-50 text-xs text-neutral-500 font-medium uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3">URL</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3 text-right">Clicks</th>
-                    <th className="px-6 py-3 text-right">Sales</th>
-                    <th className="px-6 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 text-sm">
-                  {links.map(link => (
-                    <tr key={link.id} className="group hover:bg-neutral-50">
-                      <td className="px-6 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-neutral-600 truncate max-w-[200px]">{link.url}</span>
-                          <button className="text-neutral-400 hover:text-neutral-900 transition-colors">
-                            <Copy size={12} />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-                          link.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-600'
-                        }`}>
-                          {link.status}
+                  {/* Badges Grid */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Revenue Model */}
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                        Revenue model
+                      </label>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${revenueBadge.bg} ${revenueBadge.text} ${revenueBadge.border}`}
+                        >
+                          {revenueBadge.label}
                         </span>
-                      </td>
-                      <td className="px-6 py-3 text-right font-mono text-neutral-900">{link.clicks}</td>
-                      <td className="px-6 py-3 text-right font-mono text-neutral-900">{link.sales}</td>
-                      <td className="px-6 py-3 text-right">
-                        <button className="text-xs text-neutral-500 hover:text-red-600 font-medium">Disable</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-             </table>
-          </section>
+                      </div>
+                    </div>
 
-        </div>
+                    {/* Status */}
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                        Status
+                      </label>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}
+                        >
+                          {statusBadge.label}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-        {/* Right Column (Narrow) */}
-        <div className="lg:col-span-1 space-y-8">
-          
-          {/* Pricing Summary */}
-          <section className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm">
-             <div className="flex items-center gap-2 mb-4">
-               <DollarSign size={18} className="text-neutral-400" />
-               <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">Current Price</h2>
-             </div>
-             
-             <div className="mb-6">
-                <div className="text-4xl font-bold text-neutral-900 font-mono tracking-tight">
-                  ${product.defaultPrice?.unitAmount || product.defaultPrice?.amount}
-                  <span className="text-base text-neutral-500 font-normal ml-1">
-                     {product.defaultPrice?.currency}
-                     {product.revenueModel !== 'one_time' && '/mo'}
-                  </span>
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                        Created
+                      </label>
+                      <p className="text-sm text-neutral-600 mt-1">{formatDate(product.createdAt)}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
+                        Last updated
+                      </label>
+                      <p className="text-sm text-neutral-600 mt-1">{formatDateTime(product.updatedAt)}</p>
+                    </div>
+                  </div>
                 </div>
-                {product.revenueModel === 'usage_based' && (
-                  <div className="text-xs text-neutral-500 mt-1">per {product.defaultPrice?.usageUnitName}</div>
-                )}
-             </div>
+              </div>
 
-             <div className="pt-4 border-t border-neutral-100">
-               <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-neutral-500 font-medium">Default Plan</span>
-                  <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">Active</span>
-               </div>
-             </div>
+              {/* Actions */}
+              <button
+                onClick={onEditProduct}
+                className="shrink-0 px-4 py-2 border border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all flex items-center gap-2"
+              >
+                <Edit size={16} strokeWidth={2} />
+                Edit product
+              </button>
+            </div>
           </section>
 
-          {/* Pricing Agent Insight */}
-          <section className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm relative overflow-hidden">
-             <div className="flex items-center gap-2 mb-4">
-               <Sparkles size={18} className="text-amber-500" />
-               <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">Pricing Recommendation</h2>
-             </div>
+          {/* Payment Links Section */}
+          <section
+            className="bg-white border border-neutral-200 rounded-xl shadow-sm p-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <ExternalLink size={18} className="text-neutral-400" strokeWidth={2} />
+                <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">Payment Links</h2>
+                <span className="text-xs text-neutral-400">({paymentLinks.length} links)</span>
+              </div>
+              <button
+                onClick={onCreatePaymentLink}
+                className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-all shadow-sm hover:shadow flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Create payment link
+              </button>
+            </div>
 
-             <div className="relative z-10 space-y-4">
-               <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-neutral-500 uppercase tracking-wide">Typical Price</span>
-                    <span className="text-xs font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">High Confidence</span>
-                  </div>
-                  <div className="text-2xl font-bold text-neutral-900 font-mono">
-                    ${typicalPrice.toFixed(2)}
-                  </div>
-               </div>
-
-               <div>
-                 <div className="flex items-center justify-between text-sm mb-2">
-                   <span className="text-neutral-600">Adoption Status</span>
-                   <span className="font-medium text-amber-700">Modified ({deviation > 0 ? '+' : ''}{deviation.toFixed(0)}%)</span>
-                 </div>
-                 <p className="text-xs text-neutral-500 leading-relaxed">
-                   Your price is <strong className="text-neutral-900">{Math.abs(deviation).toFixed(0)}% {deviation > 0 ? 'higher' : 'lower'}</strong> than the typical recommendation.
-                 </p>
-               </div>
-               
-               <div className="pt-2">
-                 <button className="w-full text-xs font-medium text-neutral-900 border border-neutral-200 bg-white px-3 py-2 rounded hover:bg-neutral-50 transition-colors flex items-center justify-center gap-1">
-                   View History & Rationale
-                   <ArrowLeft size={12} className="rotate-180" />
-                 </button>
-               </div>
-             </div>
+            <PaymentLinksList
+              links={paymentLinks}
+              prices={prices}
+              onCreateLink={onCreatePaymentLink}
+              onCopyUrl={handleCopyUrl}
+              onToggleStatus={handleToggleStatus}
+              onEditName={handleEditName}
+              onDelete={handleDelete}
+            />
           </section>
-
         </div>
-      </div>
+      </main>
+
+      {/* Edit Link Name Modal (simplified) */}
+      {showEditNameModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-neutral-900 mb-4">Edit link name</h3>
+            <input
+              type="text"
+              value={editingLinkName}
+              onChange={(e) => setEditingLinkName(e.target.value)}
+              placeholder="Enter link name"
+              className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 mb-4"
+              autoFocus
+            />
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowEditNameModal(false)}
+                className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Save link name:', editingLinkName, 'for link:', editingLinkId);
+                  setShowEditNameModal(false);
+                }}
+                className="px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-lg hover:bg-neutral-800 transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
