@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Clock, 
+import {
+  Clock,
   Zap,
   Box,
   Coins,
@@ -17,8 +17,15 @@ import {
 import Button from '../components/Button';
 import SlideOver from '../components/SlideOver';
 import Modal from '../components/Modal';
-import { SAMPLE_DELIVERIES, TEST_LIVE_DELIVERY, formatDateTime } from '../constants';
+import { SAMPLE_DELIVERIES, formatDateTime } from '../constants';
 import { Delivery, DeliveryStatus, Step } from '../types';
+import { generateMockApiKey } from '../utils';
+
+const CONNECT_STEPS = [
+  { n: 1, label: 'Get API Key' },
+  { n: 2, label: 'Install SDK' },
+  { n: 3, label: 'Test Trace' },
+] as const;
 
 const DashboardPage: React.FC = () => {
   // --- State ---
@@ -42,22 +49,15 @@ const DashboardPage: React.FC = () => {
 
   // --- Effects ---
 
-  // When onboarded, clear sample data and show live data
+  // When onboarded, switch to live data mode
   useEffect(() => {
-    if (isOnboarded) {
-      setDeliveries([TEST_LIVE_DELIVERY]);
-    } else {
-      setDeliveries(SAMPLE_DELIVERIES);
-    }
+    setDeliveries(isOnboarded ? [SAMPLE_DELIVERIES[0]] : SAMPLE_DELIVERIES);
   }, [isOnboarded]);
 
   // Reset tree expansion when delivery changes
   useEffect(() => {
     if (selectedDelivery) {
-      // Default: Expand all top-level nodes? Or just keep closed?
-      // Requirement: "Initial state: Only show top-level Parent Span"
-      // But we might want to auto-expand failed nodes?
-      setExpandedStepIds(new Set()); 
+      setExpandedStepIds(new Set());
     }
   }, [selectedDelivery]);
 
@@ -69,20 +69,16 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleGenerateKey = () => {
-    // Mock key generation
-    const key = 'sk_live_' + Math.random().toString(36).substring(2, 18);
-    setGeneratedKey(key);
-    // Auto advance for prototype smoothness, or let user click continue
+    setGeneratedKey(generateMockApiKey());
   };
 
   const handleSendTestTrace = () => {
     setIsSendingTrace(true);
-    // Simulate network delay for test trace
     setTimeout(() => {
       setIsSendingTrace(false);
-      setIsOnboarded(true); // Switch to live mode
-      setIsConnectModalOpen(false); // Close modal
-      setSelectedDelivery(TEST_LIVE_DELIVERY); // Open detail view
+      setIsOnboarded(true);
+      setIsConnectModalOpen(false);
+      setSelectedDelivery(SAMPLE_DELIVERIES[0]);
     }, 1500);
   };
 
@@ -405,19 +401,15 @@ const DashboardPage: React.FC = () => {
       </SlideOver>
 
       {/* --- CONNECT SDK MODAL --- */}
-      <Modal 
-        isOpen={isConnectModalOpen} 
+      <Modal
+        isOpen={isConnectModalOpen}
         onClose={() => setIsConnectModalOpen(false)}
         width="max-w-2xl"
       >
         <div className="py-2">
            {/* Steps Header */}
            <div className="flex items-center justify-between mb-8 px-8">
-              {[
-                { n: 1, label: 'Get API Key' },
-                { n: 2, label: 'Install SDK' },
-                { n: 3, label: 'Test Trace' }
-              ].map((s) => (
+              {CONNECT_STEPS.map((s) => (
                 <div key={s.n} className="flex flex-col items-center gap-2 relative z-10 w-24">
                    <div className={`
                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
@@ -436,15 +428,15 @@ const DashboardPage: React.FC = () => {
               ))}
               {/* Connecting Lines */}
               <div className="absolute left-0 right-0 top-[2.75rem] h-0.5 bg-neutral-100 -z-0 mx-16" />
-              <div 
-                className="absolute left-0 top-[2.75rem] h-0.5 bg-green-500 -z-0 mx-16 transition-all duration-500" 
+              <div
+                className="absolute left-0 top-[2.75rem] h-0.5 bg-green-500 -z-0 mx-16 transition-all duration-500"
                 style={{ width: connectStep === 1 ? '0%' : connectStep === 2 ? '50%' : '100%' }}
               />
            </div>
 
            {/* Step Content */}
            <div className="min-h-[320px] flex flex-col justify-between">
-              
+
               {/* Step 1: API Key */}
               {connectStep === 1 && (
                 <div className="space-y-6 px-4 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -464,10 +456,7 @@ const DashboardPage: React.FC = () => {
                          <button
                            aria-label="Copy API key to clipboard"
                            className="p-2 hover:bg-white rounded text-neutral-500 hover:text-neutral-900 transition-colors shadow-sm"
-                           onClick={() => {
-                             navigator.clipboard.writeText(generatedKey);
-                             // Could add toast notification here
-                           }}
+                           onClick={() => navigator.clipboard.writeText(generatedKey)}
                          >
                             <Copy size={18} />
                          </button>
@@ -487,7 +476,7 @@ const DashboardPage: React.FC = () => {
                      <h3 className="text-xl font-bold text-neutral-900 mb-2">Install the SDK</h3>
                      <p className="text-neutral-500">Run this command in your terminal.</p>
                    </div>
-                   
+
                    <div className="max-w-lg mx-auto w-full space-y-4">
                       <div className="bg-neutral-900 rounded-xl p-4 shadow-lg text-neutral-100 font-mono text-sm flex items-center justify-between group">
                         <span className="text-green-400 mr-2" aria-hidden="true">$</span>
@@ -495,9 +484,7 @@ const DashboardPage: React.FC = () => {
                         <button
                           aria-label="Copy install command"
                           className="text-neutral-500 group-hover:text-white transition-colors"
-                          onClick={() => {
-                            navigator.clipboard.writeText('pip install anyway-sdk');
-                          }}
+                          onClick={() => navigator.clipboard.writeText('pip install anyway-sdk')}
                         >
                           <Copy size={16} />
                         </button>
@@ -522,7 +509,7 @@ const DashboardPage: React.FC = () => {
                      <h3 className="text-xl font-bold text-neutral-900 mb-2">Send a Test Trace</h3>
                      <p className="text-neutral-500">Trigger your agent code to send a test event.</p>
                    </div>
-                   
+
                    <div className="flex items-center justify-center py-4">
                       {isSendingTrace ? (
                         <div className="flex flex-col items-center gap-4 py-4">
@@ -605,10 +592,9 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
 }) => {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const isFailed = step.status === 'failed';
-  
+
   // --- Guide Lines Logic ---
   const isLastChild = (s: Step, allSteps: Step[]) => {
-    // Determine siblings based on parentId
     const siblings = allSteps.filter(sib => sib.parentId === s.parentId);
     if (siblings.length === 0) return true;
     return siblings[siblings.length - 1].id === s.id;
@@ -618,7 +604,7 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
   const ancestorsMap = useMemo(() => {
     const map = new Map<number, Step>();
     let curr = step;
-    while(curr.parentId) {
+    while (curr.parentId) {
        const parent = steps.find(s => s.id === curr.parentId);
        if (parent) {
          map.set(parent.depth, parent);
@@ -634,77 +620,54 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
 
    return (
      <div className="relative group">
-      {/* 1. Guide Lines Container (Absolute, spans full height including details) - Moved BEFORE content but controlled via z-index */}
+      {/* Guide Lines Container */}
       <div className="absolute top-0 bottom-0 left-0 flex pointer-events-none select-none z-0" style={{ width: (step.depth + 1) * INDENT_SIZE + 24 }}>
          {/* Ancestor Lines */}
          {Array.from({ length: step.depth }).map((_, i) => {
             const ancestor = ancestorsMap.get(i);
             const isAncestorLast = ancestor ? isLastChild(ancestor, steps) : true;
-            // Line should be at the right edge of the slot (aligned with icon center)
             if (isAncestorLast) return <div key={i} style={{ width: INDENT_SIZE }} />;
-            
+
             return (
                <div key={i} style={{ width: INDENT_SIZE }} className="relative">
-                  {/* Vertical line at the RIGHT edge of the slot to match icon center */}
                   <div className="absolute top-0 bottom-0 right-0 w-px bg-neutral-200 -mr-px" />
                </div>
             );
          })}
 
-         {/* Current Step Connector (L-Curve or Vertical Through-Line) */}
+         {/* Current Step Connector */}
          <div style={{ width: INDENT_SIZE }} className="relative">
             {step.depth > 0 ? (
                <>
-                 {/* Parent Line Continuation (from left edge) */}
-                 {/* The parent line is at the left edge of THIS slot (which is right edge of previous slot) */}
                  <div className="absolute top-0 h-1/2 left-0 w-px bg-neutral-200 -ml-px" />
-                 
-                 {/* L-Curve Horizontal (from left edge to center/right) */}
-                 {/* Icon is at the right edge of this slot. So line goes from left-0 to right-0 */}
                  <div className="absolute top-1/2 left-0 right-0 h-px bg-neutral-200" />
-                 
-                 {/* Vertical Continuation for Siblings (from center down) */}
-                 {/* If this is NOT the last child, the parent line continues down at left edge */}
                  {!isCurrentLast && (
                     <div className="absolute top-1/2 bottom-0 left-0 w-px bg-neutral-200 -ml-px" />
                  )}
                </>
             ) : (
-               /* Depth 0: Vertical Through-Line Logic */
-               <>
-                  {/* Vertical line at right edge (aligned with icon) */}
-                  {/* Connects from top (if not first?) to bottom (if not last) */}
-                  {/* For simplicity, draw full height if not last. 
-                      If first, maybe start from icon top? But "Timeline" usually implies continuous flow.
-                      Let's draw full height line at right edge. 
-                  */}
-                  <div className={`absolute top-0 right-0 w-px bg-neutral-200 -mr-px ${isCurrentLast ? 'h-1/2' : 'bottom-0'}`} />
-               </>
+               <div className={`absolute top-0 right-0 w-px bg-neutral-200 -mr-px ${isCurrentLast ? 'h-1/2' : 'bottom-0'}`} />
             )}
          </div>
       </div>
 
-      {/* 2. Content Container */}
-      <div 
+      {/* Content Container */}
+      <div
          className={`relative transition-all duration-200 rounded-lg border border-transparent z-10
            ${isDetailsExpanded ? 'bg-neutral-50 border-neutral-200' : 'hover:bg-neutral-50 hover:border-neutral-200'}
          `}
-         style={{ paddingLeft: step.depth * INDENT_SIZE }} // Indent content
+         style={{ paddingLeft: step.depth * INDENT_SIZE }}
       >
         {/* Row Header */}
-        <div 
-          className="flex items-center py-3 pr-4 cursor-pointer" 
-          onClick={() => {
-            // Restore: Clicking the row toggles the Details Panel for ALL spans.
-            setIsDetailsExpanded(!isDetailsExpanded);
-          }}
+        <div
+          className="flex items-center py-3 pr-4 cursor-pointer"
+          onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
         >
-           
+
            {/* Tree Toggle & Icon Area */}
            <div
              className="flex items-center justify-center mr-3 relative z-10 w-12 h-6 cursor-pointer"
              onClick={(e) => {
-               // Interaction: Clicking the icon/chevron toggles the Tree View (Expand/Collapse Children).
                if (hasChildren) {
                  e.stopPropagation();
                  onToggleTreeExpand();
@@ -721,14 +684,12 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                }
              }}
            >
-              {/* Expand Button */}
               {hasChildren && (
                 <div className="absolute -left-3 p-1 text-neutral-400 transition-colors hover:text-neutral-600" aria-hidden="true">
                   {isTreeExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </div>
               )}
-              
-              {/* Node Icon */}
+
               <div className={`
                  relative z-20 flex items-center justify-center rounded-full border shadow-sm transition-transform duration-200
                  ${hasChildren ? 'w-6 h-6 border-neutral-300 bg-white text-neutral-700' : 'w-5 h-5 border-neutral-200 bg-neutral-50 text-neutral-500'}
@@ -770,13 +731,13 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
            </div>
         </div>
 
-        {/* --- DETAILS PANEL (Inline) --- */}
+        {/* Details Panel */}
         {isDetailsExpanded && (
           <div className="pb-4 pr-4 pl-12 sm:pl-14 animate-in slide-in-from-top-1 duration-200 relative cursor-default" onClick={(e) => e.stopPropagation()}>
-             
+
              <div className="bg-white border border-neutral-200 rounded-lg p-4 shadow-sm space-y-4 mt-2">
-                
-                {/* 1. Usage Breakdown */}
+
+                {/* Usage Breakdown */}
                 {(step.tokensTotal !== undefined || step.tokensIn !== undefined) && (
                   <div>
                      <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider flex items-center gap-2">
@@ -799,19 +760,17 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                   </div>
                 )}
 
-                {/* 2. Configuration & I/O */}
+                {/* Configuration & I/O */}
                 <div>
                    <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider">
                      Configuration & I/O
                    </h4>
                    <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden text-sm divide-y divide-neutral-100">
-                      {/* Model */}
                       <div className="flex items-center px-4 py-3">
                          <div className="w-32 text-neutral-500 font-medium shrink-0">Model</div>
                          <div className="font-mono text-neutral-900">{step.model || '-'}</div>
                       </div>
-                      
-                      {/* Provider (Optional - user didn't show in screenshot but good to keep) */}
+
                       {step.provider && (
                         <div className="flex items-center px-4 py-3">
                            <div className="w-32 text-neutral-500 font-medium shrink-0">Provider</div>
@@ -819,7 +778,6 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                         </div>
                       )}
 
-                      {/* Input */}
                       {step.input && (
                         <div className="flex items-start px-4 py-3">
                            <div className="w-32 text-neutral-500 font-medium shrink-0 pt-1.5">Input</div>
@@ -829,7 +787,6 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                         </div>
                       )}
 
-                      {/* Output */}
                       {step.output && (
                         <div className="flex items-start px-4 py-3">
                            <div className="w-32 text-neutral-500 font-medium shrink-0 pt-1.5">Output</div>
@@ -839,8 +796,7 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                         </div>
                       )}
 
-                       {/* Error */}
-                       {step.error && (
+                      {step.error && (
                         <div className="flex items-start px-4 py-3 bg-red-50/30">
                            <div className="w-32 text-red-500 font-medium shrink-0 pt-1.5">Error</div>
                            <div className="flex-1 bg-red-50 rounded px-3 py-2 border border-red-100 font-mono text-xs text-red-700 overflow-x-auto whitespace-pre-wrap">
@@ -851,25 +807,22 @@ const TraceStepRow: React.FC<TraceStepRowProps> = ({
                    </div>
                 </div>
 
-                {/* 3. Performance */}
+                {/* Performance */}
                 <div>
                   <h4 className="text-[10px] uppercase font-bold text-neutral-400 mb-2 tracking-wider">
                     Performance
                   </h4>
                   <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden flex divide-x divide-neutral-100">
-                      {/* Finish Reason */}
                       <div className="flex-1 px-4 py-3">
                          <div className="text-xs text-neutral-500 mb-1">Finish Reason</div>
                          <div className="font-mono text-sm text-neutral-900">{step.finishReason || '-'}</div>
                       </div>
-                      
-                      {/* Duration */}
+
                       <div className="flex-1 px-4 py-3">
                          <div className="text-xs text-neutral-500 mb-1">Duration</div>
                          <div className="font-mono text-sm font-bold text-neutral-900">{step.durationMs}ms</div>
                       </div>
 
-                      {/* Start Time */}
                       <div className="flex-1 px-4 py-3">
                          <div className="text-xs text-neutral-500 mb-1">Start Time</div>
                          <div className="font-mono text-sm text-neutral-900">

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, MoreHorizontal, Copy, Check, Eye, EyeOff, Trash2, Ban } from 'lucide-react';
 import { ApiKey, ApiKeyType, ApiKeyStatus } from '../types';
 import { INITIAL_SDK_KEYS, INITIAL_PAYMENT_KEYS, formatDate, MASK_CHAR } from '../constants';
+import { generateMockApiKey } from '../utils';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 
@@ -31,13 +32,13 @@ const DevelopersPage: React.FC = () => {
     // Mock API Call
     setTimeout(() => {
       const prefix = newKeyData.type === ApiKeyType.SDK ? 'sk_live_' : 'pk_live_';
-      const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      
+      const randomPart = generateMockApiKey().replace('sk_live_', '');
+
       const newKey: ApiKey = {
         id: `key_${Date.now()}`,
         name: newKeyData.name || (newKeyData.type === ApiKeyType.SDK ? 'New SDK Key' : 'New Payment Key'),
         type: newKeyData.type,
-        token: `${prefix}${randomString}`,
+        token: `${prefix}${randomPart}`,
         status: ApiKeyStatus.ACTIVE,
         created: new Date().toISOString(),
         lastUsed: null,
@@ -48,7 +49,7 @@ const DevelopersPage: React.FC = () => {
       } else {
         setPaymentKeys([newKey, ...paymentKeys]);
       }
-      
+
       setCreatedKey(newKey);
       setCreateStep(2);
     }, 600);

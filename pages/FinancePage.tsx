@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  Landmark, 
-  ArrowUpRight, 
-  AlertCircle, 
-  Clock, 
+import {
+  Landmark,
+  ArrowUpRight,
+  AlertCircle,
+  Clock,
   ExternalLink,
   Wallet,
   X,
@@ -15,79 +15,10 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronDown,
-  Info
+  Info,
 } from 'lucide-react';
-import { 
-  ConnectStatus, 
-  ConnectStatusType, 
-  Balance, 
-  Payout, 
-  PayoutStatus 
-} from '../types';
-
-// --- MOCK DATA ---
-
-const MOCK_CONNECT_STATUS: Record<ConnectStatusType, ConnectStatus> = {
-  not_connected: {
-    merchantId: 'm_123',
-    status: 'not_connected'
-  },
-  restricted: {
-    merchantId: 'm_123',
-    stripeAccountId: 'acct_123',
-    status: 'restricted',
-    disabledReason: 'Identity verification required',
-    requirementsDue: ['identity_document']
-  },
-  enabled: {
-    merchantId: 'm_123',
-    stripeAccountId: 'acct_123',
-    status: 'enabled'
-  }
-};
-
-const MOCK_BALANCE: Balance = {
-  currency: 'USD',
-  availableAmount: 4250.50,
-  onTheWayAmount: 1280.00,
-  updatedAt: new Date().toISOString()
-};
-
-const MOCK_PAYOUTS: Payout[] = [
-  {
-    id: 'po_2',
-    merchantId: 'm_123',
-    amount: 230.00,
-    currency: 'USD',
-    status: 'in_transit',
-    arrivalDate: '2026-01-07',
-    destinationDisplay: 'Chase ****4242',
-    stripePayoutId: 'po_123457',
-    createdAt: '2026-01-06T09:30:00Z'
-  },
-  {
-    id: 'po_1',
-    merchantId: 'm_123',
-    amount: 1500.00,
-    currency: 'USD',
-    status: 'paid',
-    arrivalDate: '2026-01-05',
-    destinationDisplay: 'Chase ****4242',
-    stripePayoutId: 'po_123456',
-    createdAt: '2026-01-03T10:00:00Z'
-  },
-  {
-    id: 'po_3',
-    merchantId: 'm_123',
-    amount: 5000.00,
-    currency: 'USD',
-    status: 'failed',
-    failureReason: 'Bank account closed',
-    destinationDisplay: 'Chase ****4242',
-    stripePayoutId: 'po_123458',
-    createdAt: '2025-12-28T14:15:00Z'
-  }
-];
+import { ConnectStatus, ConnectStatusType, Balance, Payout, PayoutStatus } from '../types';
+import { MOCK_CONNECT_STATUS, MOCK_BALANCE, MOCK_PAYOUTS } from '../constants';
 
 // --- COMPONENTS ---
 

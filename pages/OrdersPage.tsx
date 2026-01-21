@@ -44,9 +44,7 @@ const MOCK_ORDERS: Order[] = [
       country: 'US',
       cvcCheck: 'pass',
       zipCheck: 'pass',
-      ownerName: 'John Developer',
-      ownerEmail: 'dev.team@startup.io',
-      billingAddress: '123 Tech Blvd, San Francisco, CA'
+      ownerName: 'John Developer'
     },
     fees: {
       processing: 1.14,
@@ -54,8 +52,7 @@ const MOCK_ORDERS: Order[] = [
     },
     timeline: [
       { id: 'evt_1', type: 'payment_captured', timestamp: '2024-01-05T14:30:05Z', description: 'Payment succeeded' },
-      { id: 'evt_2', type: 'payment_authorized', timestamp: '2024-01-05T14:30:02Z', description: 'Payment authorized' },
-      { id: 'evt_3', type: 'payment_started', timestamp: '2024-01-05T14:30:00Z', description: 'Checkout started' },
+      { id: 'evt_2', type: 'payment_started', timestamp: '2024-01-05T14:30:00Z', description: 'Checkout started' }
     ]
   },
   {
@@ -86,55 +83,8 @@ const MOCK_ORDERS: Order[] = [
       net: 47.28
     },
     timeline: [
-      { id: 'evt_4', type: 'payment_captured', timestamp: '2024-01-05T12:15:05Z' },
-      { id: 'evt_5', type: 'payment_started', timestamp: '2024-01-05T12:15:00Z' },
-    ]
-  },
-  {
-    id: 'ord_03',
-    merchantId: 'mer_01',
-    productId: 'prod_01',
-    productName: 'Code Review Agent',
-    customerEmail: 'suspicious@user.net',
-    amount: 29.00,
-    currency: 'USD',
-    status: 'failed',
-    createdAt: '2024-01-04T09:45:00Z',
-    stripeObject: 'payment_intent',
-    stripeObjectId: 'pi_3Kx4...',
-    stripeDashboardUrl: '#',
-    timeline: [
-      { id: 'evt_6', type: 'payment_failed', timestamp: '2024-01-04T09:45:02Z', description: 'Card declined: insufficient funds' },
-      { id: 'evt_7', type: 'payment_started', timestamp: '2024-01-04T09:45:00Z' },
-    ]
-  },
-  {
-    id: 'ord_04',
-    merchantId: 'mer_01',
-    productId: 'prod_03',
-    productName: 'Legal Doc Analyzer',
-    customerEmail: 'client@lawfirm.com',
-    amount: 299.00,
-    currency: 'USD',
-    status: 'refunded',
-    createdAt: '2024-01-03T16:20:00Z',
-    stripeObject: 'payment_intent',
-    stripeObjectId: 'pi_3Kx5...',
-    stripeDashboardUrl: '#',
-    paymentMethod: {
-      type: 'card',
-      brand: 'amex',
-      last4: '1001',
-      expMonth: 5,
-      expYear: 2026,
-      country: 'US',
-      cvcCheck: 'pass',
-      zipCheck: 'pass'
-    },
-    timeline: [
-      { id: 'evt_8', type: 'refund_created', timestamp: '2024-01-04T10:00:00Z', description: 'Refunded via Dashboard' },
-      { id: 'evt_9', type: 'payment_captured', timestamp: '2024-01-03T16:20:05Z' },
-      { id: 'evt_10', type: 'payment_started', timestamp: '2024-01-03T16:20:00Z' },
+      { id: 'evt_3', type: 'payment_captured', timestamp: '2024-01-05T12:15:05Z' },
+      { id: 'evt_4', type: 'payment_started', timestamp: '2024-01-05T12:15:00Z' }
     ]
   }
 ];

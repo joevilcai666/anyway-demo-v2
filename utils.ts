@@ -177,24 +177,24 @@ export function getNextState(
 export async function generatePricingRecommendation(
   inputs: PricingAssistantFormData
 ): Promise<PricingRecommendation> {
-  // Simulate API delay (3-5 seconds)
-  const delay = 3000 + Math.random() * 2000;
-  await new Promise(resolve => setTimeout(resolve, delay));
+  await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000));
 
-  // Generate mock recommendation
-  const basePrice = inputs.manual_cost ? inputs.manual_cost * 2 : 99;
+  const hasCost = (inputs.manual_cost ?? 0) > 0;
+  const basePrice = hasCost ? inputs.manual_cost! * 2 : 99;
+  const timestamp = Date.now();
+
   return {
-    recommendation_id: `rec_${Date.now()}`,
-    snapshot_id: `snap_${Date.now()}`,
+    recommendation_id: `rec_${timestamp}`,
+    snapshot_id: `snap_${timestamp}`,
     recommended_min_price: Math.round(basePrice * 0.8),
     recommended_typical_price: Math.round(basePrice),
     recommended_max_price: Math.round(basePrice * 1.5),
-    confidence_level: inputs.manual_cost ? 'high' : 'medium',
+    confidence_level: hasCost ? 'high' : 'medium',
     assumptions: [
       { title: 'Customer segment', detail: `Targeting ${inputs.target_customer_type}` },
       { title: 'Use case', detail: inputs.use_case_category },
-      inputs.manual_cost
-        ? { title: 'Cost data', detail: `Based on provided cost: ${formatCurrency(inputs.manual_cost)}` }
+      hasCost
+        ? { title: 'Cost data', detail: `Based on provided cost: ${formatCurrency(inputs.manual_cost!)}` }
         : { title: 'No cost data', detail: 'Recommendations based on market benchmarks only' },
     ],
     rationale: [
@@ -202,8 +202,8 @@ export async function generatePricingRecommendation(
       { title: 'Typical price', detail: 'Aligns with market median' },
       { title: 'Max price', detail: 'Premium pricing for high-value customers' },
     ],
-    cost_source: inputs.manual_cost ? 'manual' : 'none',
-    has_cost_data: !!inputs.manual_cost,
+    cost_source: hasCost ? 'manual' : 'none',
+    has_cost_data: hasCost,
     llm_model: 'claude-3-5-sonnet',
     prompt_version: 'v1.0',
     schema_version: 'v1.0',
@@ -402,4 +402,12 @@ export function validateOnboardingUseCase(text: string): { isValid: boolean; err
   }
 
   return { isValid: true };
+}
+
+/**
+ * Generate a mock API key for prototype development
+ * @returns Mock API key string (e.g., "sk_live_abc123...")
+ */
+export function generateMockApiKey(): string {
+  return 'sk_live_' + Math.random().toString(36).substring(2, 18);
 }
