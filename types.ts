@@ -7,6 +7,7 @@ export enum ViewState {
   ORDERS = 'orders',
   FINANCE = 'finance',
   DEVELOPERS = 'developers',
+  SUBSCRIPTION = 'subscription',
 }
 
 export enum ApiKeyType {
@@ -359,4 +360,70 @@ export interface OnboardingUser {
   fullName?: string;
   invitationCode?: string;
   createdAt: string;
+}
+
+// --- Subscription Module Types ---
+
+export type SubscriptionState = 'active' | 'trialing' | 'past_due' | 'canceled' | 'expired';
+
+export type PlanTier = 'free' | 'starter' | 'pro' | 'enterprise';
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  planTier: PlanTier;
+  state: SubscriptionState;
+  currentPeriodStart: string; // ISO Date
+  currentPeriodEnd: string; // ISO Date
+  cancelAtPeriodEnd: boolean;
+  createdAt: string;
+  updatedAt: string;
+  trialEnd?: string; // ISO Date (if trialing)
+  cancelAt?: string; // ISO Date (if canceled)
+}
+
+export interface Plan {
+  tier: PlanTier;
+  name: string;
+  price: number;
+  currency: string;
+  billingPeriod: 'monthly' | 'yearly';
+  features: string[];
+  limits: {
+    computeUnits: number; // Per billing period
+    teamMembers: number;
+    apiCalls: number; // Per day
+  };
+  overageRate?: number; // Per unit after limit (for paid plans)
+}
+
+export interface Usage {
+  currentPeriod: {
+    computeUnits: number;
+    apiCalls: number;
+  };
+  predicted: {
+    computeUnits: number;
+    apiCalls: number;
+  };
+  percentageUsed: number; // 0-100
+  warningThreshold?: number; // 80 or 100
+}
+
+export interface SubscriptionInvoice {
+  id: string;
+  subscriptionId: string;
+  date: string; // ISO Date
+  amount: number;
+  currency: string;
+  status: 'paid' | 'pending' | 'failed';
+  pdfUrl?: string;
+  description?: string; // e.g., "Pro Plan - January 2026"
+}
+
+export interface UsageWarning {
+  threshold: number; // 80 or 100
+  message: string;
+  severity: 'warning' | 'critical';
+  action?: 'upgrade' | 'view_overage';
 }

@@ -1,4 +1,4 @@
-import { Price, PricingAssistantState, PricingAssistantFormData, PricingRecommendation } from './types';
+import { Price, PricingAssistantState, PricingAssistantFormData, PricingRecommendation, SubscriptionState, Usage, UsageWarning } from './types';
 
 // ============================================================================
 // Price Formatting Utilities
@@ -410,4 +410,97 @@ export function validateOnboardingUseCase(text: string): { isValid: boolean; err
  */
 export function generateMockApiKey(): string {
   return 'sk_live_' + Math.random().toString(36).substring(2, 18);
+}
+
+// ============================================================================
+// Subscription Utilities
+// ============================================================================
+
+/**
+ * Calculate prorate amount for plan upgrade
+ * @param currentPrice - Current plan monthly price
+ * @param targetPrice - Target plan monthly price
+ * @param daysRemaining - Days remaining in billing period
+ * @returns Prorate amount to charge immediately
+ */
+export function calculateProrateAmount(
+  currentPrice: number,
+  targetPrice: number,
+  daysRemaining: number
+): number {
+  const priceDiff = targetPrice - currentPrice;
+  const prorateFactor = daysRemaining / 30; // Assume 30-day month
+  return Math.max(0, priceDiff * prorateFactor);
+}
+
+/**
+ * Get days remaining in billing period
+ * @param periodEnd - ISO date string of period end
+ * @returns Number of days remaining
+ */
+export function getDaysRemaining(periodEnd: string): number {
+  const endDate = new Date(periodEnd);
+  const today = new Date();
+  const diffMs = endDate.getTime() - today.getTime();
+  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+/**
+ * Get subscription status label
+ * @param state - Subscription state
+ * @returns Human-readable status label
+ */
+export function getSubscriptionStatusLabel(state: SubscriptionState): string {
+  const labels: Record<SubscriptionState, string> = {
+    active: 'Active',
+    trialing: 'Trial',
+    past_due: 'Past Due',
+    canceled: 'Canceling',
+    expired: 'Expired',
+  };
+  return labels[state];
+}
+
+/**
+ * Check if usage exceeds warning threshold
+ * @param usage - Usage object
+ * @returns Warning object if threshold exceeded
+ */
+export function getUsageWarning(usage: Usage): UsageWarning | null {
+  if (usage.percentageUsed >= 100) {
+    return {
+      threshold: 100,
+      message: 'You have exceeded your plan limit. Additional usage will be billed at your plan\'s overage rate.',
+      severity: 'critical',
+      action: 'view_overage',
+    };
+  }
+  if (usage.percentageUsed >= 80) {
+    return {
+      threshold: 80,
+      message: 'You\'ve used 80% of your plan. Consider upgrading to avoid overage charges.',
+      severity: 'warning',
+      action: 'upgrade',
+    };
+  }
+  return null;
+}
+
+/**
+ * Format subscription period date range
+ * @param start - ISO date string
+ * @param end - ISO date string
+ * @returns Formatted date range (e.g., "Jan 20 - Feb 20, 2026")
+ */
+export function formatPeriodRange(start: string, end: string): string {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  const startMonth = startDate.toLocaleString('en-US', { month: 'short' });
+  const startDay = startDate.getDate();
+  const endMonth = endDate.toLocaleString('en-US', { month: 'short' });
+  const endDay = endDate.getDate();
+  const year = endDate.getFullYear();
+
+  return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`;
 }

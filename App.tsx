@@ -9,6 +9,7 @@ import OrdersPage from './pages/OrdersPage';
 import EmailInputPage from './pages/EmailInputPage';
 import InvitationCodePage from './pages/InvitationCodePage';
 import SurveyPage from './pages/SurveyPage';
+import SubscriptionPage from './pages/SubscriptionPage';
 import { Toast } from './components/Toast';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { ViewState } from './types';
@@ -56,6 +57,8 @@ const App: React.FC = () => {
         return <DevelopersPage />;
       case ViewState.FINANCE:
         return <FinancePage />;
+      case ViewState.SUBSCRIPTION:
+        return <SubscriptionPage />;
       default:
         return <NotFoundPage viewName={currentView} />;
     }

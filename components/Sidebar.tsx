@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  LayoutDashboard, 
-  Box, 
-  ShoppingCart, 
-  PieChart, 
-  FileText, 
-  LogOut, 
-  Code2, 
+import {
+  LayoutDashboard,
+  Box,
+  ShoppingCart,
+  PieChart,
+  FileText,
+  LogOut,
+  Code2,
   ChevronLeft,
   ChevronRight,
-  MoreVertical
+  MoreVertical,
+  CreditCard
 } from 'lucide-react';
 import { ViewState } from '../types';
 import { MOCK_USER } from '../constants';
@@ -194,7 +195,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Menu Items */}
             <div className="p-1.5 space-y-0.5">
-              <button 
+              <button
                 onClick={() => {
                   onChangeView(ViewState.DEVELOPERS);
                   setIsAccountPanelOpen(false);
@@ -206,8 +207,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <Code2 size={16} />
                 <span>Developers</span>
               </button>
-              
-              <button 
+
+              <button
+                onClick={() => {
+                  onChangeView(ViewState.SUBSCRIPTION);
+                  setIsAccountPanelOpen(false);
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left rounded-md transition-colors
+                  ${currentView === ViewState.SUBSCRIPTION ? 'bg-neutral-100 text-neutral-900 font-medium' : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'}
+                `}
+              >
+                <CreditCard size={16} />
+                <span>Subscription</span>
+              </button>
+
+              <button
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left rounded-md text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 transition-colors"
                 onClick={() => alert('Sign out clicked')}
               >

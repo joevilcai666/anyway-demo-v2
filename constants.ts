@@ -14,6 +14,12 @@ import {
   ConnectStatusType,
   Balance,
   Payout,
+  Plan,
+  PlanTier,
+  Subscription,
+  SubscriptionState,
+  SubscriptionInvoice,
+  Usage,
 } from './types';
 
 export const MOCK_USER = {
@@ -295,5 +301,191 @@ export const MOCK_PAYOUTS: Payout[] = [
     destinationDisplay: 'Chase ****4242',
     stripePayoutId: 'po_123456',
     createdAt: '2026-01-03T10:00:00Z',
+  },
+];
+
+// --- Subscription Mock Data ---
+
+export const SUBSCRIPTION_PLANS: Record<PlanTier, Plan> = {
+  free: {
+    tier: 'free',
+    name: 'Free',
+    price: 0,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    features: [
+      '500 compute units per month',
+      '1 team member',
+      '1,000 API calls per day',
+      'Community support',
+    ],
+    limits: {
+      computeUnits: 500,
+      teamMembers: 1,
+      apiCalls: 1000,
+    },
+  },
+  starter: {
+    tier: 'starter',
+    name: 'Starter',
+    price: 29,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    features: [
+      '10,000 compute units per month',
+      '3 team members',
+      '10,000 API calls per day',
+      'Email support',
+      'Basic analytics',
+    ],
+    limits: {
+      computeUnits: 10000,
+      teamMembers: 3,
+      apiCalls: 10000,
+    },
+    overageRate: 0.003, // $0.003 per additional unit
+  },
+  pro: {
+    tier: 'pro',
+    name: 'Pro',
+    price: 49,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    features: [
+      '50,000 compute units per month',
+      '10 team members',
+      '50,000 API calls per day',
+      'Priority support',
+      'Advanced analytics',
+      'Custom integrations',
+    ],
+    limits: {
+      computeUnits: 50000,
+      teamMembers: 10,
+      apiCalls: 50000,
+    },
+    overageRate: 0.002, // $0.002 per additional unit
+  },
+  enterprise: {
+    tier: 'enterprise',
+    name: 'Enterprise',
+    price: 199,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    features: [
+      'Unlimited compute units',
+      'Unlimited team members',
+      'Unlimited API calls',
+      'Dedicated support',
+      'Custom solutions',
+      'SLA guarantee',
+    ],
+    limits: {
+      computeUnits: Infinity,
+      teamMembers: Infinity,
+      apiCalls: Infinity,
+    },
+  },
+};
+
+export const MOCK_SUBSCRIPTIONS: Record<SubscriptionState, Subscription> = {
+  active: {
+    id: 'sub_1',
+    userId: 'user_1',
+    planTier: 'pro',
+    state: 'active',
+    currentPeriodStart: '2026-01-20T00:00:00Z',
+    currentPeriodEnd: '2026-02-20T00:00:00Z',
+    cancelAtPeriodEnd: false,
+    createdAt: '2025-12-20T00:00:00Z',
+    updatedAt: '2026-01-20T00:00:00Z',
+  },
+  trialing: {
+    id: 'sub_trial',
+    userId: 'user_1',
+    planTier: 'pro',
+    state: 'trialing',
+    currentPeriodStart: '2026-01-15T00:00:00Z',
+    currentPeriodEnd: '2026-02-15T00:00:00Z',
+    cancelAtPeriodEnd: false,
+    trialEnd: '2026-02-15T00:00:00Z',
+    createdAt: '2026-01-15T00:00:00Z',
+    updatedAt: '2026-01-15T00:00:00Z',
+  },
+  past_due: {
+    id: 'sub_pastdue',
+    userId: 'user_1',
+    planTier: 'pro',
+    state: 'past_due',
+    currentPeriodStart: '2026-01-20T00:00:00Z',
+    currentPeriodEnd: '2026-02-20T00:00:00Z',
+    cancelAtPeriodEnd: false,
+    createdAt: '2025-12-20T00:00:00Z',
+    updatedAt: '2026-01-22T00:00:00Z',
+  },
+  canceled: {
+    id: 'sub_canceled',
+    userId: 'user_1',
+    planTier: 'pro',
+    state: 'canceled',
+    currentPeriodStart: '2026-01-20T00:00:00Z',
+    currentPeriodEnd: '2026-02-20T00:00:00Z',
+    cancelAtPeriodEnd: true,
+    cancelAt: '2026-02-20T00:00:00Z',
+    createdAt: '2025-12-20T00:00:00Z',
+    updatedAt: '2026-01-18T00:00:00Z',
+  },
+  expired: {
+    id: 'sub_expired',
+    userId: 'user_1',
+    planTier: 'free',
+    state: 'expired',
+    currentPeriodStart: '2025-12-20T00:00:00Z',
+    currentPeriodEnd: '2026-01-20T00:00:00Z',
+    cancelAtPeriodEnd: true,
+    createdAt: '2025-12-20T00:00:00Z',
+    updatedAt: '2026-01-20T00:00:00Z',
+  },
+};
+
+export const MOCK_USAGE: Usage = {
+  currentPeriod: {
+    computeUnits: 8234,
+    apiCalls: 4532,
+  },
+  predicted: {
+    computeUnits: 12000,
+    apiCalls: 6500,
+  },
+  percentageUsed: 16.5,
+};
+
+export const MOCK_SUBSCRIPTION_INVOICES: SubscriptionInvoice[] = [
+  {
+    id: 'inv_jan2026',
+    subscriptionId: 'sub_1',
+    date: '2026-01-20T00:00:00Z',
+    amount: 49.00,
+    currency: 'USD',
+    status: 'paid',
+    description: 'Pro Plan - January 2026',
+  },
+  {
+    id: 'inv_dec2025',
+    subscriptionId: 'sub_1',
+    date: '2025-12-20T00:00:00Z',
+    amount: 49.00,
+    currency: 'USD',
+    status: 'paid',
+    description: 'Pro Plan - December 2025',
+  },
+  {
+    id: 'inv_nov2025',
+    subscriptionId: 'sub_1',
+    date: '2025-11-20T00:00:00Z',
+    amount: 29.00,
+    currency: 'USD',
+    status: 'paid',
+    description: 'Starter Plan - November 2025',
   },
 ];
