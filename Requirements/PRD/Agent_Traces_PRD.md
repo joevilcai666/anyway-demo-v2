@@ -1,5 +1,4 @@
-# 产品需求文档 (PRD)：Agent 行为追踪与仪表盘 (MVP)
-
+# 产品需求文档 (PRD)：Agent Traces PRD
 | 文档信息 | 详情 |
 | :--- | :--- |
 | **项目** | Anyway - AI 商业化基础设施 |
@@ -44,7 +43,7 @@ Anyway 是专为 **AI 初创企业和开发者** 设计的商业化基础设施�
 
 -   **Merchant (商家)**：Anyway 的客户（即开发者）。
 -   **Agent (智能体)**：被追踪的具体 AI 服务或机器人。
--   **Delivery (交付)**：Agent 的一次完整执行工作流（例如，“写一篇博客文章”）。这是计费单元。
+-   **Traces**：Agent 的一次完整执行工作流（例如，“写一篇博客文章”）。这是计费单元。
 -   **Step (步骤)**：Delivery 中的原子操作（例如，“调用 LLM”、“搜索网络”、“执行 Python 代码”）。
 -   **Usage (用量)**：每个 Step 的可量化消耗（Token 数、秒数、API 调用次数）。
 -   **Cost (成本)**：Usage 对应的货币价值（美元）。
@@ -118,13 +117,13 @@ Anyway 是专为 **AI 初创企业和开发者** 设计的商业化基础设施�
 
 ---
 
-## 6. 功能需求：Delivery 详情 (Trace View)
+## 6. 功能需求：Traces Execution(Trace View)
 
 **目标：** 深入查看单次执行，以审计成本和行为。
 **交互：** 侧滑面板 (Slide-over panel)，保留列表上下文。
 
 ### 6.1 头部与摘要
--   **头部：** Delivery ID + 状态徽章。
+-   **头部：** Trace ID + 状态徽章。
 -   **摘要卡片：**
     -   **总成本 (Total Cost)**：`Σ step.cost`
     -   **持续时间 (Duration)**：`ended_at - started_at`

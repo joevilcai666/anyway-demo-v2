@@ -37,7 +37,7 @@
         *   *收缩状态*：仅显示图标。
 *   **主导航 (Main Navigation - 上部区域)**：
     *   列表顺序：
-        1.  **Dashboard**
+        1.  **Agent Traces**
         2.  **Products**
         3.  **Orders**
         4.  **Finance**
