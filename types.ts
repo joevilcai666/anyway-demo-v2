@@ -23,11 +23,27 @@ export enum ApiKeyStatus {
 export interface ApiKey {
   id: string;
   name: string;
+  description?: string;
   token: string; // The full secret (in a real app, front-end might only see this once)
   type: ApiKeyType;
   status: ApiKeyStatus;
+  permissions?: ApiKeyPermission[];
+  expiresAt?: string | null; // ISO Date or null
   created: string; // ISO Date
   lastUsed: string | null; // ISO Date or null
+  usageCount?: number;
+}
+
+export type ApiKeyPermission = 'read' | 'write' | 'admin';
+
+export interface Webhook {
+  id: string;
+  url: string;
+  events: string[];
+  secret: string;
+  status: 'active' | 'disabled';
+  createdAt: string;
+  lastTriggered: string | null;
 }
 
 export interface User {

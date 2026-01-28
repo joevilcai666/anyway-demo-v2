@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import { FormInput } from '../components/form/FormInput';
 import { validateEmail } from '../utils';
 
-interface EmailInputPageProps {
-  onContinue: (email: string) => void;
-}
-
-const EmailInputPage: React.FC<EmailInputPageProps> = ({ onContinue }) => {
+const EmailInputPage: React.FC = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string>('');
   const [touched, setTouched] = useState(false);
@@ -22,7 +20,9 @@ const EmailInputPage: React.FC<EmailInputPageProps> = ({ onContinue }) => {
       return;
     }
 
-    onContinue(email);
+    // Store email in sessionStorage for next page
+    sessionStorage.setItem('userEmail', email);
+    navigate('/invitation-code');
   };
 
   return (

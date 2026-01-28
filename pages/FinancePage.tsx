@@ -6,29 +6,24 @@ import {
   Clock,
   ExternalLink,
   Wallet,
-  X,
-  Loader2,
   ChevronRight,
   ShieldCheck,
   Building2,
   AlertTriangle,
   CheckCircle2,
   ChevronLeft,
-  ChevronDown,
   Info,
+  Download,
 } from 'lucide-react';
-import { ConnectStatus, ConnectStatusType, Balance, Payout, PayoutStatus } from '../types';
-import { MOCK_CONNECT_STATUS, MOCK_BALANCE, MOCK_PAYOUTS } from '../constants';
+import { ConnectStatus, ConnectStatusType, Balance, Payout, PayoutStatus, BalanceActivity } from '../types';
+import { MOCK_CONNECT_STATUS } from '../constants';
+import { MOCK_BALANCE_ACTIVITIES, MOCK_PAYOUTS } from '../mockFinanceData';
+import WithdrawalModal from '../components/WithdrawalModal';
+import { exportBalanceActivityToCSV } from '../services/financeApi';
 
 // --- COMPONENTS ---
 
 const PayoutStatusBadge: React.FC<{ status: PayoutStatus }> = ({ status }) => {
-  // DRD Colors:
-  // Pending: Blue/Gray-blue
-  // In transit: Blue
-  // Paid: Green
-  // Failed: Red
-  // Canceled: Gray
   const styles: Record<PayoutStatus, string> = {
     paid: 'bg-green-50 text-green-700 border-green-200',
     pending: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -52,10 +47,31 @@ const PayoutStatusBadge: React.FC<{ status: PayoutStatus }> = ({ status }) => {
   );
 };
 
+const ActivityStatusBadge: React.FC<{ type: BalanceActivity['type'] }> = ({ type }) => {
+  const styles: Record<BalanceActivity['type'], string> = {
+    payment: 'bg-green-50 text-green-700 border-green-200',
+    payout: 'bg-blue-50 text-blue-700 border-blue-200',
+    refund: 'bg-amber-50 text-amber-700 border-amber-200',
+    fee: 'bg-red-50 text-red-700 border-red-200',
+    adjustment: 'bg-purple-50 text-purple-700 border-purple-200'
+  };
+
+  const labels: Record<BalanceActivity['type'], string> = {
+    payment: 'Payment',
+    payout: 'Payout',
+    refund: 'Refund',
+    fee: 'Fee',
+    adjustment: 'Adjustment'
+  };
+
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${styles[type]}`}>
+      {labels[type]}
+    </span>
+  );
+};
+
 const ConnectBanner: React.FC<{ status: ConnectStatus }> = ({ status }) => {
-  // Not Connected state is now handled by the main page view for better prominence
-  // This component handles "Restricted" and potentially other inline warnings
-  
   if (status.status === 'restricted') {
     return (
       <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-start justify-between gap-4">
@@ -78,149 +94,16 @@ const ConnectBanner: React.FC<{ status: ConnectStatus }> = ({ status }) => {
   return null;
 };
 
-const WithdrawModal: React.FC<{ 
-  isOpen: boolean; 
-  onClose: () => void; 
-  balance: Balance; 
-  onConfirm: (amount: number, note?: string, descriptor?: string) => void; 
-}> = ({ isOpen, onClose, balance, onConfirm }) => {
-  const [amount, setAmount] = useState<string>(balance.availableAmount.toString());
-  const [internalNote, setInternalNote] = useState('');
-  const [statementDescriptor, setStatementDescriptor] = useState('ANYWAY STORE');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      onConfirm(parseFloat(amount), internalNote, statementDescriptor);
-      setIsSubmitting(false);
-      onClose();
-    }, 1500);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
-          <h3 className="font-bold text-neutral-900">Pay out funds to your bank account</h3>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900 transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Available Balance (Read-only) */}
-          <div>
-            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
-              Available Balance
-            </label>
-            <div className="text-xl font-mono font-medium text-neutral-900">
-              ${balance.availableAmount.toFixed(2)} <span className="text-sm text-neutral-400">{balance.currency}</span>
-            </div>
-          </div>
-
-          {/* Amount Input */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Amount to pay out
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 font-medium">$</span>
-              <input 
-                type="number" 
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                max={balance.availableAmount}
-                min={1}
-                step="0.01"
-                className="w-full pl-8 pr-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent font-mono"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 text-sm font-medium">{balance.currency}</span>
-            </div>
-          </div>
-
-          {/* Internal Note (New per DRD) */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Internal note <span className="text-neutral-400 font-normal">(optional)</span>
-            </label>
-            <input 
-              type="text" 
-              value={internalNote}
-              onChange={(e) => setInternalNote(e.target.value)}
-              placeholder="e.g. Q4 Earnings"
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent text-sm"
-            />
-          </div>
-
-          {/* Statement Descriptor */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Statement Descriptor <span className="text-neutral-400 font-normal">(optional)</span>
-            </label>
-            <input 
-              type="text" 
-              value={statementDescriptor}
-              onChange={(e) => setStatementDescriptor(e.target.value)}
-              placeholder="ANYWAY* PAYOUT"
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent text-sm"
-            />
-            <p className="text-xs text-neutral-500 mt-1">This will appear on your bank statement.</p>
-          </div>
-
-          {/* Destination (Read-only) */}
-          <div className="bg-neutral-50 rounded-lg p-3 flex items-center gap-3 border border-neutral-100">
-            <div className="w-8 h-8 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-neutral-500">
-              <Building2 size={16} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-neutral-500 uppercase">Send to</p>
-              <p className="text-sm font-medium text-neutral-900 truncate">Chase Bank ****4242</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button 
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-neutral-200 text-neutral-700 font-medium rounded-lg hover:bg-neutral-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit"
-              disabled={isSubmitting || parseFloat(amount) <= 0 || parseFloat(amount) > balance.availableAmount}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white font-medium rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Processing
-                </>
-              ) : (
-                `Pay out $${amount || '0'} ${balance.currency}`
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
 const FinancePage: React.FC = () => {
   // DEV: Toggle state for demo
   const [devConnectStatus, setDevConnectStatus] = useState<ConnectStatusType>('enabled');
-  
+
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-  const [balance, setBalance] = useState(MOCK_BALANCE);
+  const [balance, setBalance] = useState({ currency: 'USD', availableAmount: 4250.50, onTheWayAmount: 1280.00, updatedAt: new Date().toISOString() });
   const [payouts, setPayouts] = useState(MOCK_PAYOUTS);
+  const [activities, setActivities] = useState(MOCK_BALANCE_ACTIVITIES);
   const [pageSize, setPageSize] = useState(20);
+  const [isExporting, setIsExporting] = useState(false);
 
   const currentStatus = MOCK_CONNECT_STATUS[devConnectStatus];
   const isConnected = devConnectStatus !== 'not_connected';
@@ -229,9 +112,10 @@ const FinancePage: React.FC = () => {
     // Optimistic update
     setBalance(prev => ({
       ...prev,
-      availableAmount: prev.availableAmount - amount
+      availableAmount: prev.availableAmount - amount,
+      onTheWayAmount: prev.onTheWayAmount + amount
     }));
-    
+
     const newPayout: Payout = {
       id: `po_new_${Date.now()}`,
       merchantId: 'm_123',
@@ -244,8 +128,40 @@ const FinancePage: React.FC = () => {
       internalNote: note,
       statementDescriptor: descriptor
     };
-    
+
     setPayouts(prev => [newPayout, ...prev]);
+
+    // Add to balance activities
+    const newActivity: BalanceActivity = {
+      id: `ba_${Date.now()}`,
+      merchantId: 'm_123',
+      type: 'payout',
+      amount: -amount,
+      currency: 'USD',
+      description: descriptor ? `Payout: ${descriptor}` : 'Payout to Chase ****4242',
+      createdAt: new Date().toISOString(),
+    };
+    setActivities(prev => [newActivity, ...prev]);
+  };
+
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      const csv = await exportBalanceActivityToCSV();
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `balance-activity-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getWithdrawDisabledReason = () => {
@@ -260,6 +176,12 @@ const FinancePage: React.FC = () => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
+  const formatActivityDate = (isoString?: string) => {
+    if (!isoString) return '-';
+    const d = new Date(isoString);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#FAFAFA]">
       {/* Dev Controls (Hidden in Prod) */}
@@ -267,7 +189,7 @@ const FinancePage: React.FC = () => {
         <span className="opacity-50 uppercase tracking-wider font-bold">Dev Preview Mode</span>
         <div className="flex gap-2">
           {(['not_connected', 'restricted', 'enabled'] as const).map(status => (
-            <button 
+            <button
               key={status}
               onClick={() => setDevConnectStatus(status)}
               className={`px-2 py-0.5 rounded ${devConnectStatus === status ? 'bg-brand-yellow text-neutral-900' : 'bg-neutral-800 text-neutral-400'}`}
@@ -280,7 +202,7 @@ const FinancePage: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-8 py-8 space-y-8">
-          
+
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -289,10 +211,10 @@ const FinancePage: React.FC = () => {
                 View balances and payouts powered by Stripe Connect.
               </p>
             </div>
-            
-            {/* Main CTA - Always visible but disabled if not connected/restricted */}
+
+            {/* Main CTA */}
             <div className="relative group">
-              <button 
+              <button
                 onClick={() => setIsWithdrawModalOpen(true)}
                 disabled={!isConnected || devConnectStatus === 'restricted' || balance.availableAmount <= 0}
                 className="bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2"
@@ -313,7 +235,7 @@ const FinancePage: React.FC = () => {
           <ConnectBanner status={currentStatus} />
 
           {!isConnected ? (
-            // --- NOT CONNECTED STATE (Enhanced per DRD) ---
+            // --- NOT CONNECTED STATE ---
             <div className="space-y-6">
               {/* Warning Banner */}
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 text-amber-900">
@@ -326,7 +248,7 @@ const FinancePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Main Empty State / Call to Action */}
+              {/* Main Empty State */}
               <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-12 text-center flex flex-col items-center">
                 <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-400 mb-6">
                   <Landmark size={32} />
@@ -340,7 +262,7 @@ const FinancePage: React.FC = () => {
                     You won't be able to generate payment links for your products until Stripe Connect is set up.
                   </p>
                 </div>
-                
+
                 <button className="bg-brand-yellow text-neutral-900 px-6 py-3 rounded-lg font-bold hover:bg-yellow-400 transition-colors flex items-center gap-2 shadow-sm text-base">
                   Connect with Stripe
                   <ArrowUpRight size={20} />
@@ -384,10 +306,118 @@ const FinancePage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Balance Activity Table */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-neutral-900">Balance activity</h2>
+                  <button
+                    onClick={handleExportCSV}
+                    disabled={isExporting}
+                    className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 disabled:opacity-50 transition-colors"
+                  >
+                    <Download size={16} />
+                    {isExporting ? 'Exporting...' : 'Export CSV'}
+                  </button>
+                </div>
+
+                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left min-w-[800px]">
+                      <thead className="bg-neutral-50 border-b border-neutral-200">
+                        <tr>
+                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-48">Date</th>
+                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-32">Type</th>
+                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Description</th>
+                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider text-right w-32">Gross Amount</th>
+                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider text-right w-32">Fees</th>
+                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider text-right w-32">Net Amount</th>
+                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-32">Available On</th>
+                          <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100">
+                        {activities.length > 0 ? (
+                          activities.map((activity) => (
+                            <tr key={activity.id} className="group hover:bg-neutral-50 transition-colors">
+                              <td className="px-6 py-4 text-sm text-neutral-600 font-mono whitespace-nowrap">
+                                {formatDateTime(activity.createdAt)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <ActivityStatusBadge type={activity.type} />
+                              </td>
+                              <td className="px-6 py-4 text-sm text-neutral-600">
+                                {activity.description || '-'}
+                              </td>
+                              <td className="px-6 py-4 text-sm font-mono font-medium text-neutral-900 text-right whitespace-nowrap">
+                                {activity.amount >= 0 ? '$' : '-$'}{Math.abs(activity.amount).toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 text-sm font-mono text-neutral-600 text-right whitespace-nowrap">
+                                {(activity.fees || 0) < 0 ? '-$' : '$'}{Math.abs(activity.fees || 0).toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 text-sm font-mono font-medium text-neutral-900 text-right whitespace-nowrap">
+                                {activity.netAmount !== undefined
+                                  ? (activity.netAmount >= 0 ? '$' : '-$') + Math.abs(activity.netAmount).toFixed(2)
+                                  : (activity.amount >= 0 ? '$' : '-$') + Math.abs(activity.amount).toFixed(2)
+                                }
+                              </td>
+                              <td className="px-6 py-4 text-sm text-neutral-600 font-mono whitespace-nowrap">
+                                {formatActivityDate(activity.availableOn)}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <a
+                                  href="#"
+                                  className="text-neutral-400 hover:text-neutral-900 transition-colors opacity-0 group-hover:opacity-100"
+                                  title="View details"
+                                >
+                                  <ExternalLink size={16} />
+                                </a>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={8} className="px-6 py-12 text-center text-neutral-500 text-sm">
+                              No balance activity yet.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Footer */}
+                  <div className="px-6 py-3 border-t border-neutral-200 bg-neutral-50 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                      <span>Rows per page:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => setPageSize(Number(e.target.value))}
+                        className="bg-white border border-neutral-300 rounded px-2 py-1 focus:outline-none focus:border-neutral-500"
+                      >
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-neutral-500">
+                      <span>1-{Math.min(activities.length, pageSize)} of {activities.length}</span>
+                      <div className="flex gap-1">
+                        <button disabled className="p-1 rounded hover:bg-neutral-200 disabled:opacity-30">
+                          <ChevronLeft size={16} />
+                        </button>
+                        <button disabled className="p-1 rounded hover:bg-neutral-200 disabled:opacity-30">
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Recent Payouts */}
               <div className="space-y-4">
                 <h2 className="text-lg font-bold text-neutral-900">Recent payouts</h2>
-                
+
                 <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left min-w-[600px]">
@@ -420,8 +450,8 @@ const FinancePage: React.FC = () => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                <a 
-                                  href="#" 
+                                <a
+                                  href="#"
                                   className="text-neutral-400 hover:text-neutral-900 transition-colors opacity-0 group-hover:opacity-100"
                                   title="View in Stripe"
                                 >
@@ -445,7 +475,7 @@ const FinancePage: React.FC = () => {
                   <div className="px-6 py-3 border-t border-neutral-200 bg-neutral-50 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs text-neutral-500">
                       <span>Rows per page:</span>
-                      <select 
+                      <select
                         value={pageSize}
                         onChange={(e) => setPageSize(Number(e.target.value))}
                         className="bg-white border border-neutral-300 rounded px-2 py-1 focus:outline-none focus:border-neutral-500"
@@ -474,7 +504,7 @@ const FinancePage: React.FC = () => {
         </div>
       </div>
 
-      <WithdrawModal 
+      <WithdrawalModal
         isOpen={isWithdrawModalOpen}
         onClose={() => setIsWithdrawModalOpen(false)}
         balance={balance}

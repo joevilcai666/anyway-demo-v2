@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import { FormInput } from '../components/form/FormInput';
 import { FormTextarea } from '../components/form/FormTextarea';
@@ -21,19 +22,23 @@ const SOURCE_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
-interface SurveyPageProps {
-  onNavigateBack: () => void;
-  email?: string; // Pre-filled email from previous step
-}
-
-const SurveyPage: React.FC<SurveyPageProps> = ({ onNavigateBack, email = '' }) => {
+const SurveyPage: React.FC = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<OnboardingFormDataInterface>({
-    email,
+    email: '',
     fullName: '',
     companyName: '',
     useCase: '',
     source: '',
   });
+
+  // Load email from sessionStorage
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem('userEmail');
+    if (savedEmail) {
+      setFormData((prev) => ({ ...prev, email: savedEmail }));
+    }
+  }, []);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -118,7 +123,7 @@ const SurveyPage: React.FC<SurveyPageProps> = ({ onNavigateBack, email = '' }) =
         setIsSuccess(true);
         // Navigate back after 3 seconds
         setTimeout(() => {
-          onNavigateBack();
+          navigate('/invitation-code');
         }, 3000);
       } else {
         setErrors({ submit: result.error || 'Failed to submit request' });
@@ -168,7 +173,7 @@ const SurveyPage: React.FC<SurveyPageProps> = ({ onNavigateBack, email = '' }) =
 
         {/* Back Button */}
         <button
-          onClick={onNavigateBack}
+          onClick={() => navigate('/invitation-code')}
           className="mb-6 text-[14px] text-[#2563EB] hover:underline transition-all flex items-center gap-1"
         >
           ← Back to invitation code
