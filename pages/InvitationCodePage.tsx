@@ -1,26 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import { FormInput } from '../components/form/FormInput';
 import { Spinner } from '../components/Spinner';
 import { validateInvitationCode } from '../utils';
 import { validateInvitationCode as apiValidateInvitationCode } from '../services/mockOnboardingApi';
 
-interface InvitationCodePageProps {
-  email: string;
-  onNavigateToSurvey: () => void;
-  onNavigateToDashboard: () => void;
-  onNavigateToLogin: () => void;
-}
-
-const InvitationCodePage: React.FC<InvitationCodePageProps> = ({
-  email,
-  onNavigateToSurvey,
-  onNavigateToDashboard,
-  onNavigateToLogin,
-}) => {
+const InvitationCodePage: React.FC = () => {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState<string>('');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load email from sessionStorage
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem('userEmail');
+    if (savedEmail) {
+      setEmail(savedEmail);
+    } else {
+      // No email, go back
+      navigate('/email-input');
+    }
+  }, [navigate]);
 
   // Auto-format: only allow digits, max 5
   const handleCodeChange = (value: string) => {
@@ -45,7 +47,7 @@ const InvitationCodePage: React.FC<InvitationCodePageProps> = ({
       const result = await apiValidateInvitationCode(code, email);
       if (result.success) {
         // Navigate to dashboard on success
-        onNavigateToDashboard();
+        navigate('/dashboard');
       } else {
         setError(result.error || 'Invalid invitation code. Please contact support.');
       }
@@ -137,7 +139,7 @@ const InvitationCodePage: React.FC<InvitationCodePageProps> = ({
           {/* Apply for Access Button */}
           <button
             type="button"
-            onClick={onNavigateToSurvey}
+            onClick={() => navigate('/survey')}
             className="w-full h-[48px] bg-[#1A1A1A] hover:bg-[#2A2A2A] text-white text-[15px] font-medium rounded-full transition-all duration-150 shadow-sm hover:shadow-md"
           >
             Apply for access
@@ -147,7 +149,7 @@ const InvitationCodePage: React.FC<InvitationCodePageProps> = ({
           <div className="text-center pt-4">
             <button
               type="button"
-              onClick={onNavigateToLogin}
+              onClick={() => {/* TODO: Implement login page */}}
               className="text-[14px] text-[#666666] hover:text-[#1A1A1A] underline transition-all"
             >
               Sign in now
